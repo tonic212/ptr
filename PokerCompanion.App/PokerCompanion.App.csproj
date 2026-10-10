@@ -6,6 +6,11 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../PokerCompanion.Core/PokerCompanion.Core.csproj" />
-    <Content Include="Data/**/*"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="Data/**/*" Condition="'$(PublishSingleFile)' != 'true'"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+  </ItemGroup>
+  <ItemGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <EmbeddedResource Include="Data/**/*">
+      <LogicalName>PokerCompanionAssets/Data/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

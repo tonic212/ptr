@@ -2,16 +2,38 @@
 
 C# / WPF, .NET 8. Open PokerCompanion.sln in Visual Studio with the .NET desktop development workload and .NET 8 SDK. Set PokerCompanion.App as startup project. Build > Build Solution; press F5.
 
+## One EXE launches the app and local vision
+
+The standalone publisher creates **PokerCompanion.App.exe** with the .NET runtime, chart data, chart images and recognition seeds embedded. No adjacent Data folder or installed .NET runtime is required. Copy the EXE to the target Windows x64 PC and open it.
+
+First launch (vision enabled):
+- The app starts its own local Ollama service on `127.0.0.1:11435`, separate from a user's normal Ollama tray service.
+- If Ollama is installed at its standard per-user location, the app uses its CLI. Otherwise it downloads the official pinned `v0.40.2` portable Windows NVIDIA runtime (about 1.47 GB), verifies its published SHA-256 and extracts it into `%LOCALAPPDATA%\PokerCompanion\runtime`.
+- Missing Qwen3-VL weights are downloaded through Ollama's model-pull API, with progress shown in the app. Existing models in `%USERPROFILE%\.ollama\models` are reused. The default model download is about 3.3 GB.
+- Internet is needed for initial downloads, and the portable setup requires at least 12 GB free space. Closing the app cancels setup. **Prepare local vision** retries it. Later launches use cached files and can run without network access.
+- The EXE is the one file distributed and launched. Native runtime files and multi-gigabyte model weights are cached on disk; they are not embedded inside this EXE. This is first-run provisioning, not a fully offline model bundle.
+- Only the Ollama process started by this app is stopped on exit. The app does not terminate a user's independent Ollama service. One UI instance per user session is permitted.
+
+Visual Studio publish:
+1. Open `PokerCompanion.sln` and rebuild.
+2. Right-click **PokerCompanion.App > Publish**, choose the existing **Standalone** profile at `PokerCompanion.App/Properties/PublishProfiles/Standalone.pubxml`, then Publish.
+3. Or run from the solution folder: `dotnet publish PokerCompanion.App/PokerCompanion.App.csproj -c Release -p:PublishProfile=Standalone -p:DebugType=embedded -o artifacts/standalone`.
+4. Run `artifacts/standalone/PokerCompanion.App.exe`.
+
+GitHub Actions builds, runs recognition checks, publishes, asserts the publish directory contains exactly one EXE, and starts that EXE in an asset smoke-test mode without adjacent Data files. Download the **PokerCompanion-win-x64** artifact from a successful workflow run. The smoke test does not download multi-gigabyte runtime/model files or prove GPU inference. Runtime/model startup still needs a check on the target PC.
+
+Runtime provisioning is handled by `OllamaRuntimeInstaller` and `LocalOllamaHost`; `OllamaVisionCardReader` awaits runtime readiness before requests. Bundled chart extraction is handled by `BundledDataStore`, independent of recognition/UI logic. Bundled assets are content-addressed and repaired if missing/corrupt.
+
 ## Local vision recognition (Ollama)
 
 Default model: `qwen3-vl:4b-instruct-q4_K_M` (Qwen3-VL 4B Instruct, Q4_K_M). The published model download is about 3.3 GB; runtime VRAM includes image/context buffers. A 10 GB GPU is a reasonable starting point, but real speed and accuracy must be measured on the user's PC. The app uses a 4,096-token context and at most 96 generated tokens per card reading. It does not benchmark tokens/second or claim a latency target.
 
-1. Install the current Windows Ollama application from https://ollama.com/download/windows and leave it running.
-2. In PowerShell, run `ollama pull qwen3-vl:4b-instruct-q4_K_M`.
+1. Open the app. It prepares the local runtime and model automatically; no manual Ollama installation is required.
+2. Wait for **Local vision ready** on first launch.
 3. Pull this branch, open `PokerCompanion.sln`, set `PokerCompanion.App` as startup project, then Build > Rebuild Solution and F5.
-4. Leave **Use local vision model (Ollama)** checked. Click **Check Ollama** to verify the installed model advertises vision support.
+4. Leave **Use local vision model (Ollama)** checked. Click **Prepare local vision** to verify the installed model advertises vision support.
 5. Start PPPoker preview. If it captures the desktop, use **Select table area** to crop the entire portrait table.
-6. The app reads a small bottom hero-card crop, upscaled for readability, through `http://127.0.0.1:11434/api/chat`. No cloud model or external inference endpoint is configured. Redirects/proxies are disabled for this client.
+6. The app reads a small bottom hero-card crop, upscaled for readability, through `http://127.0.0.1:11435/api/chat`. No cloud model or external inference endpoint is configured. Redirects/proxies are disabled for this client.
 7. For an existing screenshot, click **Load screenshot**, select the table area if needed, then **Read frozen image** to retry. Static readings display cards but do not populate the live chart input.
 8. Two matching model readings from separate live captures confirm a hand. If the crop changes, requests and confirmation are invalidated; absent/invalid/duplicate cards clear the detected hand. The UI continues capturing while one asynchronous inference request runs. A 2-second cooldown limits repeated inference; initial model loading may take longer, with a 90-second timeout.
 9. Model name and enabled state are saved in `%LOCALAPPDATA%\PokerCompanion\vision-settings.json`. For a smaller comparison model, pull `qwen3-vl:2b-instruct-q4_K_M` and enter that exact name; benchmark both on the same frozen screenshots before choosing.

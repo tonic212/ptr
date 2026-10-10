@@ -61,14 +61,14 @@ public sealed class VisionRecognitionController : IDisposable
         catch (OperationCanceledException)
         {
             if (!_disposed && generation == _generation)
-            { _confirmation.Reset(); _confirmed = false; Publish(new(false, "", "", "Vision request timed out. Check Ollama and try again."), staticPreview); }
+            { _confirmation.Reset(); _confirmed = false; Publish(new(false, "", "", "Vision request timed out. Prepare local vision and try again."), staticPreview); }
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or ArgumentException or System.Text.Json.JsonException or System.IO.IOException)
         {
             if (!_disposed && generation == _generation)
             {
                 _confirmation.Reset(); _confirmed = false;
-                string message = ex is HttpRequestException ? "Cannot connect to local Ollama. Start Ollama, pull the model, then click Check Ollama." : ex.Message;
+                string message = ex is HttpRequestException ? "Local vision could not connect. Click Prepare local vision to retry setup." : ex.Message;
                 Publish(new(false, "", "", message), staticPreview);
             }
         }

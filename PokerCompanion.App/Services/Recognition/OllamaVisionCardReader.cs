@@ -14,6 +14,7 @@ namespace PokerCompanion.App.Services.Recognition;
 public sealed class OllamaVisionCardReader : IVisionCardReader, IDisposable
 {
     private readonly HttpClient _http;
+    private readonly ILocalModelHost? _host;
     private const string Prompt = "Read the TWO face-up hero playing cards in this cropped PPPoker image, left to right. "
         + "Read each small rank and suit; ignore avatars, badges, chips, buttons and text. "
         + "Ranks: A K Q J T 9 8 7 6 5 4 3 2. Suits: c=clubs d=diamonds h=hearts s=spades. "
@@ -24,14 +25,17 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IDisposable
         + "Return only the requested JSON object, without strategy or explanations.";
 
     public OllamaVisionCardReader() : this(new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false }) { }
-    public OllamaVisionCardReader(HttpMessageHandler handler)
+    public OllamaVisionCardReader(ILocalModelHost host) : this(new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false }, host) { }
+    public OllamaVisionCardReader(HttpMessageHandler handler, ILocalModelHost? host = null)
     {
-        _http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:11434/"), Timeout = TimeSpan.FromSeconds(90) };
+        _host = host;
+        _http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:11435/"), Timeout = TimeSpan.FromSeconds(90) };
     }
 
     public async Task<string> CheckAsync(string model, CancellationToken cancellationToken)
     {
         ValidateModel(model);
+        if (_host is not null) await _host.EnsureReadyAsync(model, cancellationToken);
         using var response = await _http.PostAsJsonAsync("api/show", new { model }, cancellationToken);
         await EnsureSuccess(response, cancellationToken);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
@@ -44,6 +48,7 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IDisposable
     public async Task<HandObservation> ReadAsync(byte[] png, string model, CancellationToken cancellationToken)
     {
         ValidateModel(model);
+        if (_host is not null) await _host.EnsureReadyAsync(model, cancellationToken);
         if (png.Length == 0 || png.Length > 4 * 1024 * 1024) throw new ArgumentException("Invalid card crop size.");
         var schema = new
         {
@@ -92,7 +97,7 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IDisposable
     {
         if (response.IsSuccessStatusCode) return;
         if (response.StatusCode == HttpStatusCode.NotFound)
-            throw new InvalidOperationException("Model not installed. Run: ollama pull <the model name shown in the app>.");
+            throw new InvalidOperationException("Model not installed. Click Prepare local vision to download it.");
         string body = await response.Content.ReadAsStringAsync(token);
         throw new InvalidOperationException("Ollama request failed (" + (int)response.StatusCode + "). " + body[..Math.Min(body.Length, 300)]);
     }

@@ -10,11 +10,11 @@ public sealed class ChartRepository
 {
     public IReadOnlyList<Chart> Load()
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Data", "charts.json");
+        string path = Path.Combine(BundledDataStore.Root, "Data", "charts.json");
         var charts = JsonSerializer.Deserialize<List<Chart>>(File.ReadAllText(path))
             ?? throw new InvalidDataException("Chart data is empty.");
         foreach (Chart chart in charts)
-            if (chart.Actions.Count != 169 || !File.Exists(Path.Combine(AppContext.BaseDirectory, chart.ImagePath)))
+            if (chart.Actions.Count != 169 || !File.Exists(Path.Combine(BundledDataStore.Root, chart.ImagePath)))
                 throw new InvalidDataException($"Invalid chart: {chart.Name}");
         return charts;
     }

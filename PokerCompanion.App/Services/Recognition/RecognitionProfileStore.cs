@@ -13,7 +13,7 @@ public sealed class RecognitionProfileStore
 
     public RecognitionProfile Load()
     {
-        string seedPath = Path.Combine(AppContext.BaseDirectory, "Data", "recognition-seeds.json");
+        string seedPath = Path.Combine(BundledDataStore.Root, "Data", "recognition-seeds.json");
         var seed = JsonSerializer.Deserialize<RecognitionProfile>(File.ReadAllText(seedPath))
             ?? throw new InvalidDataException("Seed templates are missing.");
         _ = new HandRecognitionSession(seed);

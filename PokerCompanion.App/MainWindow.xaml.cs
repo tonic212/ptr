@@ -19,7 +19,8 @@ public partial class MainWindow : Window
     private readonly ScreenCaptureService _capture = new();
     private readonly RecognitionProfileStore _profileStore = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly OllamaVisionCardReader _visionReader = new();
+    private readonly LocalOllamaHost _localHost = new();
+    private readonly OllamaVisionCardReader _visionReader;
     private readonly VisionSettingsStore _visionStore = new();
     private readonly VisionRecognitionController _vision;
     private readonly CancellationTokenSource _lifetime = new();
@@ -37,7 +38,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _visionReader = new(_localHost);
         _vision = new(_visionReader);
+        _localHost.Progress += status => Dispatcher.InvokeAsync(() => { if (!_lifetime.IsCancellationRequested) CaptureStatus.Text = status; });
         _vision.ObservationReady += (observation, staticPreview) =>
         {
             if (VisionEnabled.IsChecked != true) return;
@@ -54,8 +57,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) { MessageBox.Show(ex.Message, "Startup failed"); Close(); return; }
         _timer.Tick += CaptureFrame;
-        Loaded += (_, _) => LoadWindows();
-        Closed += (_, _) => { _lifetime.Cancel(); _vision.Dispose(); _visionReader.Dispose(); _lifetime.Dispose(); _timer.Stop(); _overlay?.Close(); _lastFrame = null; _rawFrame = null; Preview.Source = null; };
+        Loaded += async (_, _) => { LoadWindows(); if (VisionEnabled.IsChecked == true) await PrepareVisionAsync(); };
+        Closed += (_, _) => { _lifetime.Cancel(); _vision.Dispose(); _localHost.Dispose(); _visionReader.Dispose(); _lifetime.Dispose(); _timer.Stop(); _overlay?.Close(); _lastFrame = null; _rawFrame = null; Preview.Source = null; };
     }
     private void LoadWindows()
     {
@@ -251,10 +254,14 @@ public partial class MainWindow : Window
     private async void CheckOllama(object sender, RoutedEventArgs e)
     {
         var button = (System.Windows.Controls.Button)sender; button.IsEnabled = false;
-        try { CaptureStatus.Text = await _visionReader.CheckAsync(VisionModel.Text.Trim(), _lifetime.Token); }
-        catch (OperationCanceledException) { if (!_lifetime.IsCancellationRequested) CaptureStatus.Text = "Ollama check timed out."; }
-        catch (Exception ex) { CaptureStatus.Text = ex.Message; }
+        try { await PrepareVisionAsync(); }
         finally { if (!_lifetime.IsCancellationRequested) button.IsEnabled = true; }
+    }
+    private async System.Threading.Tasks.Task PrepareVisionAsync()
+    {
+        try { CaptureStatus.Text = await _visionReader.CheckAsync(VisionModel.Text.Trim(), _lifetime.Token); }
+        catch (OperationCanceledException) { if (!_lifetime.IsCancellationRequested) CaptureStatus.Text = "Vision setup timed out. Click Prepare local vision to retry."; }
+        catch (Exception ex) { if (!_lifetime.IsCancellationRequested) CaptureStatus.Text = "Vision setup: " + ex.Message; }
     }
     private void ReadFrozenImage(object sender, RoutedEventArgs e)
     {

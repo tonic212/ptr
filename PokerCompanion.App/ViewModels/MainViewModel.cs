@@ -27,7 +27,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         SelectedChart = Charts.Count > 0 ? Charts[0] : null;
     }
     public Chart? SelectedChart { get => _selectedChart; set { _selectedChart = value; Notify(); Notify(nameof(ChartImage)); Update(); } }
-    public string? ChartImage => SelectedChart is null ? null : Path.Combine(AppContext.BaseDirectory, SelectedChart.ImagePath);
+    public string? ChartImage => SelectedChart is null ? null : Path.Combine(BundledDataStore.Root, SelectedChart.ImagePath);
     public string Hand { get => _hand; set { _hand = value; Notify(); Update(); } }
     public string Stack { get => _stack; set { _stack = value; Notify(); Update(); } }
     public bool Ante { get => _ante; set { _ante = value; Notify(); Update(); } }

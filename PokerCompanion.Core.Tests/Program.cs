@@ -149,7 +149,7 @@ Check((await reader.CheckAsync("qwen3-vl:4b-instruct-q4_K_M", CancellationToken.
 Check((await reader.ReadAsync(new byte[] { 1, 2, 3 }, "qwen3-vl:4b-instruct-q4_K_M", CancellationToken.None)).Cards == "7h Ac", "Ollama transport response parsed");
 using (var sent = JsonDocument.Parse(fake.LastBody!))
 {
-    Check(fake.LastUri == "http://127.0.0.1:11434/api/chat", "vision endpoint stays local");
+    Check(fake.LastUri == "http://127.0.0.1:11435/api/chat", "vision endpoint stays local");
     Check(!sent.RootElement.GetProperty("stream").GetBoolean(), "vision nonstreaming JSON");
     Check(sent.RootElement.GetProperty("messages")[0].GetProperty("images")[0].GetString() == "AQID", "vision sends encoded crop");
     Check(sent.RootElement.GetProperty("format").GetProperty("additionalProperties").ValueKind == JsonValueKind.False, "vision constrained response schema");
@@ -164,6 +164,15 @@ catch (InvalidOperationException ex) { Check(ex.Message.Contains("not installed"
 using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
 try { await reader.ReadAsync(new byte[] { 1 }, "local", cancelled.Token); throw new Exception("FAILED: cancellation"); }
 catch (OperationCanceledException) { assertions++; }
+using var fakeHost = new FakeLocalHost();
+using var hostedHandler = new FakeOllamaHandler();
+using var hostedReader = new PokerCompanion.App.Services.Recognition.OllamaVisionCardReader(hostedHandler, fakeHost);
+await hostedReader.CheckAsync("local-vision", CancellationToken.None);
+await hostedReader.ReadAsync(new byte[] { 1 }, "local-vision", CancellationToken.None);
+Check(fakeHost.Calls == 2 && fakeHost.Model == "local-vision", "reader prepares owned runtime before check and inference");
+fakeHost.Fail = true;
+try { await hostedReader.ReadAsync(new byte[] { 1 }, "local-vision", CancellationToken.None); throw new Exception("FAILED: runtime preparation failure"); }
+catch (IOException) { assertions++; }
 Console.WriteLine($"PASS: {assertions} recognition assertions.");
 
 
@@ -181,4 +190,19 @@ sealed class FakeOllamaHandler : HttpMessageHandler
         string body = request.RequestUri.AbsolutePath == "/api/show" ? "{\"capabilities\":[\"completion\",\"vision\"]}" : Body;
         return new(Status) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
     }
+}
+
+sealed class FakeLocalHost : ILocalModelHost, IDisposable
+{
+    public int Calls { get; private set; }
+    public string? Model { get; private set; }
+    public bool Fail { get; set; }
+    public Task EnsureReadyAsync(string model, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Calls++; Model = model;
+        if (Fail) throw new IOException("Runtime setup failed.");
+        return Task.CompletedTask;
+    }
+    public void Dispose() { }
 }

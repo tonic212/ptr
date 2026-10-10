@@ -24,8 +24,8 @@
         <CheckBox x:Name="VisionEnabled" Content="Use local vision model (Ollama)" Click="VisionSettingsChanged" Margin="0,4,0,4"/>
         <TextBlock Text="Local vision model"/>
         <TextBox x:Name="VisionModel" Text="qwen3-vl:4b-instruct-q4_K_M" LostFocus="VisionSettingsChanged"/>
-        <WrapPanel><Button Content="Check Ollama" Click="CheckOllama"/><Button Content="Read frozen image" Click="ReadFrozenImage"/></WrapPanel>
-        <TextBlock Text="Install Ollama and run: ollama pull qwen3-vl:4b-instruct-q4_K_M. Vision reads cropped hero cards locally; two matching captures confirm a live hand." TextWrapping="Wrap" Margin="0,0,0,8"/>
+        <WrapPanel><Button Content="Prepare local vision" Click="CheckOllama"/><Button Content="Read frozen image" Click="ReadFrozenImage"/></WrapPanel>
+        <TextBlock Text="Vision starts with the app. First launch downloads the local runtime and model if needed; keep the app open. Later launches use cached files." TextWrapping="Wrap" Margin="0,0,0,8"/>
         <ComboBox x:Name="CaptureTargets" DisplayMemberPath="Title"/>
         <WrapPanel><Button Content="Refresh windows" Click="RefreshWindows"/><Button x:Name="CaptureButton" Content="Start PPPoker preview" Click="ToggleCapture"/></WrapPanel>
         <WrapPanel><Button Content="Select table area" Click="SelectTableArea"/><Button Content="Reset table area" Click="ResetTableArea"/></WrapPanel>

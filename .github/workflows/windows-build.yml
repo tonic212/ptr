@@ -14,3 +14,19 @@ jobs:
         run: dotnet build PokerCompanion.sln --configuration Release
       - name: Recognition regression checks
         run: dotnet run --project PokerCompanion.Core.Tests --configuration Release --no-build
+      - name: Publish standalone Windows EXE
+        run: dotnet publish PokerCompanion.App/PokerCompanion.App.csproj --configuration Release -p:PublishProfile=Standalone -p:DebugType=embedded --output artifacts/standalone
+      - name: Verify single file and bundled assets
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem artifacts/standalone -Recurse -File)
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'PokerCompanion.App.exe') { throw "Publish must produce one EXE; found $($files.Name -join ', ')" }
+          $result = Join-Path $env:RUNNER_TEMP 'pokercompanion-smoke.txt'
+          $process = Start-Process -FilePath $files[0].FullName -ArgumentList '--smoke-test', $result -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or !(Test-Path $result)) { throw 'Standalone startup check failed' }
+          Get-Content $result
+      - name: Upload standalone EXE
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PokerCompanion-win-x64
+          path: artifacts/standalone/PokerCompanion.App.exe
