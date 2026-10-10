@@ -1,0 +1,1153 @@
+[
+  {
+    "chart": "RFI | UTG",
+    "counts": {
+      "Raise": 134,
+      "Fold": 1192
+    },
+    "legendCounts": [
+      134,
+      1192
+    ],
+    "passed": true,
+    "ocr": "astion Hands\nRaise 40.4% 134/434 *00.0%\nFold 89.9% 1192/1326\n"
+  },
+  {
+    "chart": "RFI | UTG+1",
+    "counts": {
+      "Raise": 190,
+      "Fold": 1136
+    },
+    "legendCounts": [
+      190,
+      1136
+    ],
+    "passed": true,
+    "ocr": "Action Hands\nRaise 14.3% 190 / 190 100.0%\nFold 85.7% 1136/1326\n"
+  },
+  {
+    "chart": "RFI | UTG+2",
+    "counts": {
+      "Raise": 208,
+      "Fold": 1118
+    },
+    "legendCounts": [
+      1118
+    ],
+    "passed": false,
+    "ocr": "Astien Mands\nRaise 45.7% 208 {208 190.0%\nFold 84.3% 1118/1326\n"
+  },
+  {
+    "chart": "RFI | LJ",
+    "counts": {
+      "Raise": 242,
+      "Fold": 1084
+    },
+    "legendCounts": [
+      1084
+    ],
+    "passed": false,
+    "ocr": "ASTON ards\nRaise 48.3% 242 \u00a7 242 100.8%\nFold 81.7% 1084/1326\n"
+  },
+  {
+    "chart": "RFI | HJ",
+    "counts": {
+      "Raise": 282,
+      "Fold": 1044
+    },
+    "legendCounts": [
+      1044
+    ],
+    "passed": false,
+    "ocr": "action mands\nRaise 21.3% 282 { 282 400.0%\nFold 78.7% 1044/1326\n"
+  },
+  {
+    "chart": "RFI | CO",
+    "counts": {
+      "Raise": 358,
+      "Fold": 968
+    },
+    "legendCounts": [
+      358,
+      968
+    ],
+    "passed": true,
+    "ocr": "Aston Rands\nRaise 27.0% 358 / 358 100.0%\nFold 73.0% 968 / 1326\n"
+  },
+  {
+    "chart": "RFI | BTN",
+    "counts": {
+      "Raise": 678,
+      "Fold": 648
+    },
+    "legendCounts": [
+      678,
+      648
+    ],
+    "passed": true,
+    "ocr": "Action Mands\nRaise 54.4% 678/678 400.0%\nFold 48.9% 648 / 1326\n"
+  },
+  {
+    "chart": "RFI | SB",
+    "counts": {
+      "Limp": 644,
+      "Raise": 118,
+      "Raise as a bluff": 172,
+      "Fold": 392
+    },
+    "legendCounts": [
+      118,
+      172,
+      644,
+      392
+    ],
+    "passed": true,
+    "ocr": "action Hands\n\nRaise for Value 8.9% 118 / 934 12.6%\n| Raise as a Bluff 13.0% 172/934 18.4% |\nLimp 48.6% 644/934 69.0% |\n\nFold 29.6% 392 / 1326\n"
+  },
+  {
+    "chart": "Facing raise | UTG+1 vs UTG",
+    "counts": {
+      "3-bet for value": 34,
+      "Call": 44,
+      "3-bet as a bluff": 20,
+      "Fold": 1228
+    },
+    "legendCounts": [
+      34,
+      20,
+      44,
+      1228
+    ],
+    "passed": true,
+    "ocr": "Action Mands\n3-bet for Value 2.6% 34/98 34.7%\n| 3-bet as a Bluff 1.5% 20/98 20.4%]\n| Call 3.3% 44/98 44.9% |\nFold 92.6% 1228/1326\n"
+  },
+  {
+    "chart": "Facing raise | UTG+2 vs UTG/UTG+1",
+    "counts": {
+      "3-bet for value": 34,
+      "Call": 44,
+      "3-bet as a bluff": 20,
+      "Fold": 1228
+    },
+    "legendCounts": [
+      34,
+      20,
+      44,
+      1228
+    ],
+    "passed": true,
+    "ocr": "Action Mands\n3-bet for Value 2.6% 34/98 34.7%\n| 3-bet as a Bluff 1.5% 20/98 20.4%]\n| Call 3.3% 44/98 44.9% |\nFold 92.6% 1228/1326\n"
+  },
+  {
+    "chart": "Facing raise | LJ vs UTG/UTG+1",
+    "counts": {
+      "3-bet for value": 34,
+      "Call": 54,
+      "3-bet as a bluff": 24,
+      "Fold": 1214
+    },
+    "legendCounts": [
+      34,
+      24,
+      54,
+      1214
+    ],
+    "passed": true,
+    "ocr": "Action Harias\n3-bet for Vaiue 2.6% 34/112 30.4%\n| 3-bet as a Bluff 1.8% 24/412 21.4% |\nJ cai 41% 54/112 48.2% |\nFold 91.6% 1214/1326\n"
+  },
+  {
+    "chart": "Facing raise | LJ vs UTG+2",
+    "counts": {
+      "3-bet for value": 34,
+      "Call": 60,
+      "3-bet as a bluff": 32,
+      "Fold": 1200
+    },
+    "legendCounts": [
+      34,
+      32,
+      60,
+      1200
+    ],
+    "passed": true,
+    "ocr": "Action Hanus\n3-bet for Value 2.6% 34/126 27.0%\n| 3-bet as a Biuff 2.4% 32/126 25.4% ;\nJ cai 4.5% 60/126 47.6%]\nFold 90.5% 1200/1326\n"
+  },
+  {
+    "chart": "Facing raise | HJ vs UTG",
+    "counts": {
+      "3-bet for value": 34,
+      "Call": 54,
+      "3-bet as a bluff": 24,
+      "Fold": 1214
+    },
+    "legendCounts": [
+      34,
+      24,
+      54,
+      1214
+    ],
+    "passed": true,
+    "ocr": "Action Harias\n3-bet for Vaiue 2.6% 34/112 30.4%\n| 3-bet as a Bluff 1.8% 24/412 21.4% |\nJ cai 41% 54/112 48.2% |\nFold 91.6% 1214/1326\n"
+  },
+  {
+    "chart": "Facing raise | HJ vs UTG+1",
+    "counts": {
+      "3-bet for value": 34,
+      "Call": 64,
+      "3-bet as a bluff": 24,
+      "Fold": 1204
+    },
+    "legendCounts": [
+      34,
+      24,
+      64,
+      1204
+    ],
+    "passed": true,
+    "ocr": "Action Maids\n\n3-bet for Value 2.6% 34/122 27.9%\nJ 3-bet as a Bluff 1.8% 24/422 19.7%]\nB cai 48% 64/122 52.5% ff\nFold 90.8% 1204/1326 7\n"
+  },
+  {
+    "chart": "Facing raise | HJ vs UTG+2",
+    "counts": {
+      "3-bet for value": 34,
+      "Call": 70,
+      "3-bet as a bluff": 40,
+      "Fold": 1182
+    },
+    "legendCounts": [
+      34,
+      70,
+      1182
+    ],
+    "passed": false,
+    "ocr": "Action Hands\n\n3-bet for Value 2.6% 34/444 23.6%\n| 3-bet as a Bluff 3.6% 40 {144 27.8% |\nJ cai 5.3% 70/144 48.6% |\n7 Fold 89.1% 1182/1326 -\n"
+  },
+  {
+    "chart": "Facing raise | HJ vs LJ",
+    "counts": {
+      "3-bet for value": 58,
+      "Call": 78,
+      "Fold": 1130,
+      "3-bet as a bluff": 60
+    },
+    "legendCounts": [
+      58,
+      60,
+      78,
+      1130
+    ],
+    "passed": true,
+    "ocr": "Acten Hands\n\n3-bet for Value 4.4% 58/196 29.6%\n| 3-bet as a Bluff 4.5% 60/196 30.6% |\nJ cai 5.9% 78/196 39.8%\n\nFold 85.2% 1130/1326\n"
+  },
+  {
+    "chart": "Facing raise | CO vs UTG/UTG+1",
+    "counts": {
+      "3-bet for value": 38,
+      "Call": 76,
+      "Fold": 1180,
+      "3-bet as a bluff": 32
+    },
+    "legendCounts": [
+      38,
+      32,
+      1180
+    ],
+    "passed": false,
+    "ocr": "Action ManGs\n\n3-bet for Value 2.9% 38/146 26.0%\n| 3-bet as a Bluff 2.4% 32/146 21.9%]\nJ cai 5.1% 761146 52.41%]\nFold 89.0% 1180/1326 7\n"
+  },
+  {
+    "chart": "Facing raise | CO vs UTG+2",
+    "counts": {
+      "3-bet for value": 38,
+      "Call": 82,
+      "Fold": 1158,
+      "3-bet as a bluff": 48
+    },
+    "legendCounts": [
+      38,
+      48,
+      82,
+      1158
+    ],
+    "passed": true,
+    "ocr": "Action mands\n\n3-bet for Value 2.9% 38/168 22.6%\n| 3-bet as a Biuff 3.6% 48/168 28.6%\nB cai 6.2% 82/168 48.8%]\n7 Fold 87.3% 1158/1326 -\n"
+  },
+  {
+    "chart": "Facing raise | CO vs LJ",
+    "counts": {
+      "3-bet for value": 58,
+      "Call": 80,
+      "Fold": 1132,
+      "3-bet as a bluff": 56
+    },
+    "legendCounts": [
+      58,
+      56,
+      90,
+      1132
+    ],
+    "passed": false,
+    "ocr": "Action Harias\n\n3-bet for Value 4.4% 58 / 194 29.9%\n| 3-bet as a Bluff 4.2% 56/194 28.9%\nJ cai 6.0% 90/194 44.2%]\n\nFold 85.4% 1132/1326\n"
+  },
+  {
+    "chart": "Facing raise | CO vs HJ",
+    "counts": {
+      "3-bet for value": 58,
+      "Call": 84,
+      "3-bet as a bluff": 80,
+      "Fold": 1104
+    },
+    "legendCounts": [
+      58,
+      80,
+      84,
+      1104
+    ],
+    "passed": true,
+    "ocr": "Action hHarnas\n\n3-bet for Value 4.4% 58 / 222 26.1%\n| 3-bet as a Bluff 6.0% 80 / 222 36.0%\nBo cai 6.3% 84/222 37.8% |\n7 Fold 83.3% 1104/1326 ;\n"
+  },
+  {
+    "chart": "Facing raise | BTN vs UTG",
+    "counts": {
+      "3-bet for value": 34,
+      "Call": 108,
+      "Fold": 1136,
+      "3-bet as a bluff": 48
+    },
+    "legendCounts": [
+      34,
+      48,
+      108,
+      1136
+    ],
+    "passed": true,
+    "ocr": "Action Hanas\n\n3-bet for Value 2.6% 34/790 47.9%\n| 3-bet as a Bluff 3.6% 48/196 25.3% |\nJ cai 8.1% 108/190 56.8% f\n7 Fold 85.7% 1136/1326 -\n"
+  },
+  {
+    "chart": "Facing raise | BTN vs UTG+1",
+    "counts": {
+      "3-bet for value": 34,
+      "Call": 116,
+      "Fold": 1124,
+      "3-bet as a bluff": 52
+    },
+    "legendCounts": [
+      34,
+      52,
+      116,
+      1124
+    ],
+    "passed": true,
+    "ocr": "ACN mands\n\n3-bet for Value 2.6% 34 / 202 16.8%\n| 3-bet as a Bluff 3.9% 52/202 25.7% |\nB can 8.7% 116/202 57.4%]\nBold 84.8% 1124/1326 -\n"
+  },
+  {
+    "chart": "Facing raise | BTN vs UTG+2",
+    "counts": {
+      "3-bet for value": 50,
+      "Call": 136,
+      "3-bet as a bluff": 52,
+      "Fold": 1088
+    },
+    "legendCounts": [
+      50,
+      52,
+      136,
+      1088
+    ],
+    "passed": true,
+    "ocr": "Action Maricds\n\n3-bet for Value 3.8% 50/238 24.0%\n| 3-bet as a Bluff 3.9% 52/238 21.8% |\nB cai 10.3% 136/238 57.1%]\n\nFold 82.1% 1088/1326\n"
+  },
+  {
+    "chart": "Facing raise | BTN vs LJ",
+    "counts": {
+      "3-bet for value": 50,
+      "Call": 140,
+      "3-bet as a bluff": 60,
+      "Fold": 1076
+    },
+    "legendCounts": [
+      50,
+      60,
+      140,
+      1076
+    ],
+    "passed": true,
+    "ocr": "Action karids\n\n3-bet for Value 3.8% 50 / 250 20.0%\nJ 3-betas a Bluff 45% 60/250 24.0% ff\nJ cai 10.6% 140/250 56.0% f\nFold 81.1% 1076/1326 7\n"
+  },
+  {
+    "chart": "Facing raise | BTN vs HJ",
+    "counts": {
+      "3-bet for value": 54,
+      "Call": 152,
+      "3-bet as a bluff": 68,
+      "Fold": 1052
+    },
+    "legendCounts": [
+      54,
+      68,
+      152,
+      1052
+    ],
+    "passed": true,
+    "ocr": "Action Kands\n\n3-bet for Value 4.4% 54/274 19.7%\nJ 3-bet as a Bluff 5.1% 68/274 24.8%]\nJ cai 11.5% 152/274 55.5% |\nFold 79.3% 1052/1326 7\n"
+  },
+  {
+    "chart": "Facing raise | BTN vs CO",
+    "counts": {
+      "3-bet for value": 54,
+      "Call": 184,
+      "3-bet as a bluff": 92,
+      "Fold": 996
+    },
+    "legendCounts": [
+      54,
+      92,
+      184,
+      996
+    ],
+    "passed": true,
+    "ocr": "Aetion mands\n\n3-bet for Value 4.1% 54/330 16.4%\n| 3-bet as a Bluff 6.9% 92/330 27.9% |\nB cai 13.9% 184/330 55.8% |\nFold 75.1% 996 / 1326 -\n"
+  },
+  {
+    "chart": "Facing raise | SB vs UTG/UTG+1",
+    "counts": {
+      "3-bet for value": 22,
+      "Call": 86,
+      "Fold": 1206,
+      "3-bet as a bluff": 12
+    },
+    "legendCounts": [
+      22,
+      12,
+      86,
+      1206
+    ],
+    "passed": true,
+    "ocr": "Action Hands\n\n3-bet for Value 1.7% 22/420 18.3%\n| 3-bet as a Bluff 0.9% 12/420 10.0%\nJ cai 65% 86/120 71.7%|\n\nFold 91.0% 1206/1326\n"
+  },
+  {
+    "chart": "Facing raise | SB vs UTG+2",
+    "counts": {
+      "3-bet for value": 22,
+      "Call": 104,
+      "Fold": 1188,
+      "3-bet as a bluff": 12
+    },
+    "legendCounts": [
+      22,
+      12,
+      104,
+      1188
+    ],
+    "passed": true,
+    "ocr": "ACN mands\n\n3-bet for Value 1.7% 22/438 15.9%\nBl 3-bet as a Bluff 0.9% 12/138 387%|\nB cai 7.8% 104/138 75.4%]\nBold 89.6% 1188/1326 -\n"
+  },
+  {
+    "chart": "Facing raise | SB vs LJ",
+    "counts": {
+      "3-bet for value": 38,
+      "Call": 94,
+      "Fold": 1166,
+      "3-bet as a bluff": 28
+    },
+    "legendCounts": [
+      28,
+      94,
+      1166
+    ],
+    "passed": false,
+    "ocr": "ACHON Hands\n\n3-bet for Value 2.9% 38 { 160 23.8%\n| 3-bet as a Bluff 2.4% 28/160 417.5% |\nJ car 7.14% 94/160 58.8% |\n\nFold 87.9% 1166/1326\n"
+  },
+  {
+    "chart": "Facing raise | SB vs HJ",
+    "counts": {
+      "3-bet for value": 38,
+      "Call": 104,
+      "3-bet as a bluff": 40,
+      "Fold": 1144
+    },
+    "legendCounts": [
+      38,
+      40,
+      104,
+      1144
+    ],
+    "passed": true,
+    "ocr": "ASTON Rands\n\n3-bet for Vaiue 2.9% 38 / 782 20.9%\nJ set as a Bluff 3.0% 40/182 22.0%\nJ cau 7.8% 104/182 57.1% |\nFold 86.3% 1144/1326 ;\n"
+  },
+  {
+    "chart": "Facing raise | SB vs CO",
+    "counts": {
+      "3-bet for value": 74,
+      "3-bet as a bluff": 148,
+      "Fold": 1104
+    },
+    "legendCounts": [
+      74,
+      148,
+      0,
+      1104
+    ],
+    "passed": false,
+    "ocr": "ACTION mapnias\n- 3-bet for Vaiue 5.6% 74/222 33.2%\n| 3-bet as a Biuff 171.2% 148 / 222 66.7% I\nJ can 0.0% 0/222 0.0% |\nFold 83.3% 1104/1326\n"
+  },
+  {
+    "chart": "Facing raise | SB vs BTN",
+    "counts": {
+      "3-bet for value": 102,
+      "3-bet as a bluff": 180,
+      "Fold": 1044
+    },
+    "legendCounts": [
+      180,
+      0,
+      1044
+    ],
+    "passed": false,
+    "ocr": "Action Hands\n\n3-bet for Value 1.7% 402 {282 36.2%\n| 3-bet as a Bluff 43.6% 180/282 63.8% |\n| cari 0.0% 0/282 0.0% |\nFold 78.7% 1044/1326 -\n"
+  },
+  {
+    "chart": "Facing raise | BB vs UTG/UTG+1",
+    "counts": {
+      "3-bet for value": 26,
+      "Call": 316,
+      "Fold": 956,
+      "3-bet as a bluff": 28
+    },
+    "legendCounts": [
+      26,
+      28,
+      316,
+      956
+    ],
+    "passed": true,
+    "ocr": "ACHGN mands\n\n3-bet for Vaiue 2.0% 26/370 7.0%\n| 3-bet as a Biuff 2.1% 28/376 7.6% |\nJ can 23.8% 316/370 85.4% |\nFold 72.1%  956/1326 -\n"
+  },
+  {
+    "chart": "Facing raise | BB vs UTG+2",
+    "counts": {
+      "3-bet for value": 44,
+      "Call": 314,
+      "Fold": 928,
+      "3-bet as a bluff": 40
+    },
+    "legendCounts": [
+      44,
+      40,
+      314,
+      928
+    ],
+    "passed": true,
+    "ocr": "ASTIGN mangas\n\n3-bet for Value 3.3% 44/398 174.4%\n| 3-bet as a Biuff 3.0% 40/398 10.1% |\nJ can 23.7% 314/398 78.9%\n\nFold 70.0% 928 / 1326\n"
+  },
+  {
+    "chart": "Facing raise | BB vs LJ",
+    "counts": {
+      "3-bet for value": 58,
+      "Call": 336,
+      "Fold": 888,
+      "3-bet as a bluff": 44
+    },
+    "legendCounts": [
+      58,
+      44,
+      336,
+      888
+    ],
+    "passed": true,
+    "ocr": "ACTON Rands\n\n3-bet for Vaiue 4.4% 58 / 438 43.2%\n| 3-bet as a Bluff 3.3% 44/438 10.0% |\nJ cai 25.3% 336/438 76.7%|\n\nFold 67.0% 888 / 1326\n"
+  },
+  {
+    "chart": "Facing raise | BB vs HJ",
+    "counts": {
+      "3-bet for value": 70,
+      "Call": 320,
+      "Fold": 880,
+      "3-bet as a bluff": 56
+    },
+    "legendCounts": [
+      56,
+      320,
+      880
+    ],
+    "passed": false,
+    "ocr": "Aeon mangas\n\u2014 3-bet for Value 5.3% 7G f 446 15.7%\nB -bet as a Bluff 42% 56/446 12.6%]\nB cau 24.1% 320/446 71.7%\nFold 66.4% 880/1326\n"
+  },
+  {
+    "chart": "Facing raise | BB vs CO",
+    "counts": {
+      "3-bet for value": 106,
+      "Call": 392,
+      "Fold": 744,
+      "3-bet as a bluff": 84
+    },
+    "legendCounts": [
+      106,
+      84,
+      392,
+      744
+    ],
+    "passed": true,
+    "ocr": "ACTION rands\n\n3-bet for Vaiue 8.0% 106 / 582 18.2%\nJ 3-bet as a Bluff 6.3% 84/582 14.4%\nB cai 29.6% 392/582 67.4% |\nFold 56.1% 744/1326 -\n"
+  },
+  {
+    "chart": "Facing raise | BB vs BTN",
+    "counts": {
+      "3-bet for value": 124,
+      "Call": 658,
+      "3-bet as a bluff": 172,
+      "Fold": 372
+    },
+    "legendCounts": [
+      424,
+      172,
+      658,
+      372
+    ],
+    "passed": false,
+    "ocr": "ACTION rands\n\n3-bet for Vaiue 9.4% 424/954 13.0%\nJ 3-bet as a Bluff 13.0% 172/954 18.0%\nB cai 49.0% 658/954 69.0% |\nFold 28.1%  372/1326 -\n"
+  },
+  {
+    "chart": "Facing raise | BB vs SB",
+    "counts": {
+      "3-bet for value": 124,
+      "Call": 726,
+      "3-bet as a bluff": 188,
+      "Fold": 288
+    },
+    "legendCounts": [
+      124,
+      188,
+      726,
+      288
+    ],
+    "passed": true,
+    "ocr": "ASUSN mands\n\n3-bet for Value 9.4% 124/1038 14.9%\n| 3-bet as a Bluff 44.2%  188/1038 18.1% |\nB cai 54.8%  726/4038 69.9% |\n\nFold 21.7% 288/1326\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG vs UTG+1",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 44,
+      "4-bet as a bluff": 16,
+      "Fold": 46,
+      "Not in prior range": 1192
+    },
+    "legendCounts": [
+      16,
+      44,
+      46,
+      1192
+    ],
+    "passed": false,
+    "ocr": "Action mands\n\n4-bet for Value 2.1% 28 ! 434 20.9%\nB 4-bet as a Biuft 1.2% 16/134 11.9%]\nB cai 3.3% 44/134 32.8%]\n| Fold 3.5% 46/134 34.3% fl\n\u2018Fold 89.9% 1192/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG vs UTG+2",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 50,
+      "4-bet as a bluff": 20,
+      "Not in prior range": 1192,
+      "Fold": 36
+    },
+    "legendCounts": [
+      28,
+      20,
+      50,
+      36,
+      1192
+    ],
+    "passed": true,
+    "ocr": "Astion Hands\n\n4-bet for Value 2.4% 28/434 20.9%\nJ 4-bet as a Bluff 1.5% 20/134 14.9% Ff\nJ cai 3.8% 50/134 37.3% |\nJ Foi 2.7% 36/134 26.9% f\nFold 89.9% 1192/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG vs LJ",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 54,
+      "4-bet as a bluff": 20,
+      "Not in prior range": 1192,
+      "Fold": 32
+    },
+    "legendCounts": [
+      20,
+      54,
+      32,
+      1192
+    ],
+    "passed": false,
+    "ocr": "Action mands\n\n4-bet for Value 2.1% 28 { 134 20.9%\nB 4-bet as a Bluff 1.5% 20/134 14.9%]\nB cai 41% 54/134 40.3% f\nBrow 2.4% 32/134 23.9%]\nold 89.9% 1192/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG vs HJ",
+    "counts": {
+      "4-bet for value": 34,
+      "Call": 58,
+      "4-bet as a bluff": 24,
+      "Not in prior range": 1192,
+      "Fold": 18
+    },
+    "legendCounts": [
+      34,
+      58,
+      18,
+      1192
+    ],
+    "passed": false,
+    "ocr": "Action Hangs\n\n4-bet for Vaiue 2.6% 34/134 25.4%\n{ 4-bet as a Bluff 4.8% 241434 17.9% |\nJ cai 44% 58/134 43.3%\nJ Fold 1.4% 18/134 13.4%]\nFold 89.9% 1192/1326 -\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG vs CO/BTN",
+    "counts": {
+      "4-bet for value": 34,
+      "Call": 74,
+      "4-bet as a bluff": 20,
+      "Not in prior range": 1192,
+      "Fold": 6
+    },
+    "legendCounts": [
+      34,
+      20,
+      74,
+      6,
+      1192
+    ],
+    "passed": true,
+    "ocr": "action Hands\n\n4-bet for Value 2.6% 34/1434 25.4%\n\u00a7 4-bet as a Biuff 1.5% 20/134 14.9% |\n| Call 5.6% 74/134 55.2% |\n| Fold 0.5% 6/134 4.5% |\n\nFold 89.9% 1192/1326\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG vs SB/BB",
+    "counts": {
+      "4-bet for value": 34,
+      "Call": 80,
+      "4-bet as a bluff": 20,
+      "Not in prior range": 1192
+    },
+    "legendCounts": [
+      34,
+      26,
+      80,
+      6,
+      1192
+    ],
+    "passed": false,
+    "ocr": "Action Hands\n\n4-bet for Value 2.6% 34/134 25.4%\n| 4-bet as a Bluff 1.5% 26/134 14.9%\nEe 6.0% 80/134 59.7%]\n| Fold 6.6% 6/134 6.6% |\nFold 89.9% 1192/1326 ;\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG+1 vs UTG+2",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 64,
+      "4-bet as a bluff": 36,
+      "Fold": 74,
+      "Not in prior range": 1124
+    },
+    "legendCounts": [
+      28,
+      64,
+      74,
+      1124
+    ],
+    "passed": false,
+    "ocr": "Action FiaNnUs\n\n4-bet for Value 2.1% 28 / 202 13.9%\n| 4-bet as a Bluff 2.7% 36 {262 17.8% I\nB cai 4.8% 64/202 31.7%\n| Fold 5.6% 74/202 36.6% |\n\nFold 84.8% 1124/1326\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG+1 vs LJ",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 80,
+      "4-bet as a bluff": 32,
+      "Fold": 62,
+      "Not in prior range": 1124
+    },
+    "legendCounts": [
+      28,
+      32,
+      80,
+      62,
+      1124
+    ],
+    "passed": true,
+    "ocr": "Action mands\n\n4-bet for Vatue 2.1% 28 / 262 43.9%\n| 4-bet as a Bluff 2.4% 32/202 15.8%]\n| Call 6.0% 80/202 39.6% f\nkz 4.7% 62/202 30.7%\nFold 84.8% 1124/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG+1 vs HJ/CO",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 94,
+      "4-bet as a bluff": 44,
+      "Fold": 36,
+      "Not in prior range": 1124
+    },
+    "legendCounts": [
+      44,
+      94,
+      36,
+      1124
+    ],
+    "passed": false,
+    "ocr": "Action Hands\n\n4-bet for Value 2.1% 28 | 202 13.9%\nJ 4-bet as a Bluff 3.3% 44/202 21.8%]\n| Call 7.4% 94/202 46.5% |\nJ Foi 2.7% 36/202 17.8% ff\n~ Fold 84.8% 1124/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG+1 vs BTN",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 106,
+      "4-bet as a bluff": 48,
+      "Fold": 20,
+      "Not in prior range": 1124
+    },
+    "legendCounts": [
+      106,
+      1124
+    ],
+    "passed": false,
+    "ocr": "Action mands\n\n4-bet for Value 2.1% 28 f 262 73.9%\n| 4-bet as a Biuff 3.6% 48 { 262 23.8% ,\n| cal 8.0% 106/202 52.5% f\n| Fold 1.5% 26 \u00a7 262 9.9% |\nFold 84.8% 1124/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG+1 vs SB/BB",
+    "counts": {
+      "4-bet for value": 34,
+      "Call": 108,
+      "4-bet as a bluff": 48,
+      "Fold": 12,
+      "Not in prior range": 1124
+    },
+    "legendCounts": [
+      108,
+      1124
+    ],
+    "passed": false,
+    "ocr": "Action Hands\n\n4-bet for Value 2.6% 34 {202 46.8%\n| 4-bet as a Biuff 3.6% 48 {202 23.8% fl\n| Call 8.1% 108/202 53.5% ff\n| Fold 0.9% 12 {202 5.9% |\n| Fold 84.8% 1124/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG+2 vs LJ",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 84,
+      "4-bet as a bluff": 44,
+      "Fold": 52,
+      "Not in prior range": 1118
+    },
+    "legendCounts": [
+      28,
+      44,
+      84,
+      52,
+      1118
+    ],
+    "passed": true,
+    "ocr": "Action Bands\n\n4-bet for Value 2.1% 28 / 208 13.5%\n| 4-bet as a Bluff 3.3% 44/208 21.2%]\n| Call 6.3% 84/208 40.4% |\n| Fold 3.9% 52/208 25.0% I\n\nFold 84.3% 1118/1326\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG+2 vs HJ",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 90,
+      "4-bet as a bluff": 48,
+      "Fold": 42,
+      "Not in prior range": 1118
+    },
+    "legendCounts": [
+      48,
+      90,
+      42,
+      1118
+    ],
+    "passed": false,
+    "ocr": "ACuGN mangas\n\n4-bet for Value 2.1% 28 {208 13.5%\n| 4-bet as a Bluff 3.6% 48/208 23.1%\n| call 6.8% 90/208 43.3% fl\n| Fold 3.2% 42/208 20.2% |\n~ Fold 84.3% 1118/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG+2 vs CO/BTN",
+    "counts": {
+      "4-bet for value": 28,
+      "Call": 108,
+      "4-bet as a bluff": 48,
+      "Fold": 24,
+      "Not in prior range": 1118
+    },
+    "legendCounts": [
+      28,
+      48,
+      108,
+      24,
+      1118
+    ],
+    "passed": true,
+    "ocr": "Aguon mands\n\n4-bet for Value 2.4% 28 / 208 13.5%\n| 4-bet as a Bluff 3.6% 48 / 208 23.1% |\nB cai 81% 108/208 51.9%]\n| Fold 1.8% 24 / 268 11.5% |\n7 Fold 84.3% 1118/1326 ;\n"
+  },
+  {
+    "chart": "Facing 3-bet | UTG+2 vs SB/BB",
+    "counts": {
+      "4-bet for value": 34,
+      "Call": 102,
+      "4-bet as a bluff": 48,
+      "Fold": 24,
+      "Not in prior range": 1118
+    },
+    "legendCounts": [
+      34,
+      48,
+      102,
+      1118
+    ],
+    "passed": false,
+    "ocr": "Aston Hands\n\n4-bet for Value 2.6% 34/208 16.3%\n| 4-bet as a Biuff 3.6% 48 / 208 23.1% ;\nJ cai 7.1% 102/208 49.0% ff\n] Fold 1.8% 24 {268 11.5%\n~ Fold 84.3% 1118/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | LJ vs HJ",
+    "counts": {
+      "4-bet for value": 34,
+      "Call": 86,
+      "4-bet as a bluff": 48,
+      "Fold": 74,
+      "Not in prior range": 1084
+    },
+    "legendCounts": [
+      34,
+      48,
+      86,
+      74,
+      1084
+    ],
+    "passed": true,
+    "ocr": "Action FiaNnUs\n\n4-bet for Value 2.6% 34 / 242 14.0%\n| 4-bet as a Biuff 3.6% 48 / 242 19.8% I\nB cai 6.5% 86/242 35.5% |\n| Fold 5.6% 74/242 30.6% |\n\nFold 81.7% 1084/1326\n"
+  },
+  {
+    "chart": "Facing 3-bet | LJ vs CO",
+    "counts": {
+      "4-bet for value": 40,
+      "Call": 86,
+      "4-bet as a bluff": 52,
+      "Fold": 64,
+      "Not in prior range": 1084
+    },
+    "legendCounts": [
+      40,
+      86,
+      64,
+      1084
+    ],
+    "passed": false,
+    "ocr": "Aguon mands\n\n4-bet for Value 3.0% 40 / 242 16.5%\n| 4-bet as a Bluff 3.9% 52 {242 21.5% |\nB cai 6.5% 86/242 35.5% |\n| Fold 4.8% 64/242 26.4% |\n7 Fold 81.7% 1084/1326 \u201d\n"
+  },
+  {
+    "chart": "Facing 3-bet | LJ vs BTN",
+    "counts": {
+      "4-bet for value": 40,
+      "Call": 96,
+      "4-bet as a bluff": 56,
+      "Fold": 50,
+      "Not in prior range": 1084
+    },
+    "legendCounts": [
+      40,
+      96,
+      1084
+    ],
+    "passed": false,
+    "ocr": "Action Marids\n\n4-bet for Value 3.0% 40 / 242 16.5%\n| 4-bet as a Bluff 4.2% 56 {242 23.1% |\nB cai 7.2% 96/242 39.7%]\n| Fold 3.8% 50 { 242 20.7% I\n\nFold 81.7% 1084/1326\n"
+  },
+  {
+    "chart": "Facing 3-bet | LJ vs SB",
+    "counts": {
+      "4-bet for value": 40,
+      "Call": 128,
+      "4-bet as a bluff": 56,
+      "Fold": 18,
+      "Not in prior range": 1084
+    },
+    "legendCounts": [
+      40,
+      56,
+      128,
+      18,
+      1084
+    ],
+    "passed": true,
+    "ocr": "Action Hands\n\n4-bet for Vaiue 3.0% 40/242 46.5%\nJ 4-bet as a Bluff 4.2% 56/242 23.1%\n| Call 9.7% 128/242 52.9% |\nJ roid 1.4% 18/242 7.4%]\n~ Fold 81.7% 1084/1326 \u201d\n"
+  },
+  {
+    "chart": "Facing 3-bet | LJ vs BB",
+    "counts": {
+      "4-bet for value": 40,
+      "Call": 106,
+      "4-bet as a bluff": 56,
+      "Fold": 40,
+      "Not in prior range": 1084
+    },
+    "legendCounts": [
+      56,
+      106,
+      40,
+      1084
+    ],
+    "passed": false,
+    "ocr": "Action Hands\n\n4-bet for Value 3.0% 40 {242 16.5%\n| 4-bet as a Bluff 4.2% 56/242 23.4% |\n| cai 8.0% 106/242 43.8% |\n| Fold 3.0% 40/242 16.5% |\nFold 81.7% 1084/1326 -\n"
+  },
+  {
+    "chart": "Facing 3-bet | HJ vs CO",
+    "counts": {
+      "4-bet for value": 40,
+      "Call": 132,
+      "4-bet as a bluff": 60,
+      "Fold": 50,
+      "Not in prior range": 1044
+    },
+    "legendCounts": [
+      60,
+      132,
+      50,
+      1044
+    ],
+    "passed": false,
+    "ocr": "Action mands\n\n4-bet for Value 3.0% 40 {282 14.2%\nJ 4-bet as a Blutf 4.5% 60/282 21.3%\n| Call 10.0% 132/282 46.8% |\nJ Foi 3.8% 50/282 17.7%]\n~ Fold 78.7% 1044/1326 \u201d\n"
+  },
+  {
+    "chart": "Facing 3-bet | HJ vs BTN",
+    "counts": {
+      "4-bet for value": 40,
+      "Call": 138,
+      "4-bet as a bluff": 68,
+      "Fold": 36,
+      "Not in prior range": 1044
+    },
+    "legendCounts": [
+      68,
+      138,
+      36,
+      1044
+    ],
+    "passed": false,
+    "ocr": "action mands\n\n4-bet for Value 3.0% 40 {282 14.2%\nbet as a Bluff 5.1% 68/282 24.1% |\nB cai 10.4% 138/282 48.9%\nBrot 2.7% 36/282 12.8% |\nFold 78.7% 1044/1326 :\n"
+  },
+  {
+    "chart": "Facing 3-bet | HJ vs SB",
+    "counts": {
+      "4-bet for value": 40,
+      "Call": 142,
+      "4-bet as a bluff": 56,
+      "Fold": 44,
+      "Not in prior range": 1044
+    },
+    "legendCounts": [
+      142,
+      44,
+      1044
+    ],
+    "passed": false,
+    "ocr": "Action FiaNnUs\n\n4-bet for Value 3.0% 40 {282 14.2%\n| 4-bet as a Bluff 4.2% 56 {282 19.9% |\nB cai 10.7% 142/282 50.4%]\n| Fold 3.3% 44 / 282 15.6% |\n\nFold 76.7% 1044/1326\n"
+  },
+  {
+    "chart": "Facing 3-bet | HJ vs BB",
+    "counts": {
+      "4-bet for value": 40,
+      "Call": 106,
+      "4-bet as a bluff": 56,
+      "Fold": 80,
+      "Not in prior range": 1044
+    },
+    "legendCounts": [
+      40,
+      56,
+      106,
+      80,
+      1044
+    ],
+    "passed": true,
+    "ocr": "Action Maids\n\n4-bet for Value 3.0% 40/282 14.2%\n| 4-bet as a Bluff 4.2% 56/282 19.9% |\nB cai 8.0% 106/282 37.6%|\nJ Foi 6.0% 80/282 28.4%\nFold 78.7% 1044/1326 ;\n"
+  },
+  {
+    "chart": "Facing 3-bet | CO vs BTN/SB",
+    "counts": {
+      "4-bet for value": 46,
+      "Call": 152,
+      "4-bet as a bluff": 64,
+      "Fold": 96,
+      "Not in prior range": 968
+    },
+    "legendCounts": [
+      64,
+      152,
+      96,
+      968
+    ],
+    "passed": false,
+    "ocr": "action Hands\n\n4-bet for Value 3.5% 46 {358 12.8%\n\u00a7 4-bet as a Biuff 4.8% 64/358 17.9%]\n| Call 41.5% 152/358 42.5% |\n| Fold 7.2% 96/358 26.8% |\n\nFold 73.0%  968/1326\n"
+  },
+  {
+    "chart": "Facing 3-bet | CO vs BB",
+    "counts": {
+      "4-bet for value": 46,
+      "Call": 144,
+      "4-bet as a bluff": 56,
+      "Fold": 112,
+      "Not in prior range": 968
+    },
+    "legendCounts": [
+      46,
+      56,
+      144,
+      112,
+      968
+    ],
+    "passed": true,
+    "ocr": "Action Hangs\n\n4-bet for Vaiue 3.5% 46/358 42.8%\n{ 4-bet as a Bluff 4.2% 56/358 15.6% f\nJ cai 10.9% 144/358 40.2% |\nJ Fold 84% 112/358 31.3%]\nFold 73.0%  968/1326 7\n"
+  },
+  {
+    "chart": "Facing 3-bet | BTN vs SB/BB",
+    "counts": {
+      "4-bet for value": 72,
+      "Call": 246,
+      "4-bet as a bluff": 124,
+      "Fold": 236,
+      "Not in prior range": 648
+    },
+    "legendCounts": [
+      72,
+      124,
+      246,
+      236,
+      648
+    ],
+    "passed": true,
+    "ocr": "Action ancs\n\n4-bet for Value 5.4% 72/678 10.6%\n| 4-bet as a Bluff 9.4% 124/678 18.3% |\nB cat 18.6% 246/678 36.3% |\n| Fold 17.8% 236 / 678 34.8% |\n7 Fold 48.9% 648 / 1326 :\n"
+  },
+  {
+    "chart": "Facing 3-bet | SB vs BB",
+    "counts": {
+      "Not in prior range": 1036,
+      "4-bet for value": 36,
+      "Call": 98,
+      "4-bet as a bluff": 52,
+      "Fold": 104
+    },
+    "legendCounts": [
+      52,
+      98,
+      104,
+      1036
+    ],
+    "passed": false,
+    "ocr": "Action Hands\n\n4-bet for Value 2.9% 36 {280 12.4%\nBh 4-bet as a Butt 3.9% 52/290 17.9%]\nB cai 7.4% 98/290 33.8%\nBrot 7.8% 104/290 35.9%\nold 78.1% 1036/1326 :\n"
+  },
+  {
+    "chart": "Facing 3-bet | SB limp vs BB raise",
+    "counts": {
+      "3-bet for value": 24,
+      "Not in prior range": 682,
+      "Call": 500,
+      "3-bet as a bluff": 60,
+      "Fold": 60
+    },
+    "legendCounts": [
+      60,
+      500,
+      60,
+      682
+    ],
+    "passed": false,
+    "ocr": "Action mands\n\n3-bet for Value 1.8% 24! G44 3.7%\nJ 3-bet as a Blut 45% 60/644 9.3%]\nBcai 37.7% 500/644 77.6% |\nJ Foi 45% 60/644 9.3% |\n~ Fold 51.4%  682/1326 ;\n"
+  }
+]

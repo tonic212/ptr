@@ -1,0 +1,25 @@
+# Visual Studio local files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# .NET build output
+**/bin/
+**/obj/
+TestResults/
+
+# Local recognition state and screenshots
+local-data/
+captures/
+
+# Python tooling caches
+__pycache__/
+*.pyc
+.venv/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini

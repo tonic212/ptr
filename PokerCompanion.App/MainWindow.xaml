@@ -1,0 +1,32 @@
+<Window x:Class="PokerCompanion.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Poker Companion - chart prototype" Width="1180" Height="820" MinWidth="850" MinHeight="650" Background="#F3F4F6">
+  <Grid Margin="20">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="350"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel>
+        <TextBlock Text="Poker Companion" FontSize="26" FontWeight="Bold" Margin="0,0,0,8"/>
+        <TextBlock Text="Manual chart lookup + capture preview. Automatic recognition and equity are not implemented." TextWrapping="Wrap" Margin="0,0,0,16"/>
+        <TextBlock Text="Exact chart scenario"/>
+        <ComboBox ItemsSource="{Binding Charts}" SelectedItem="{Binding SelectedChart}" DisplayMemberPath="Name"/>
+        <TextBlock Text="Hand class (AA, AKs, AKo)"/>
+        <TextBox Text="{Binding Hand, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBlock Text="Effective stack (BB)"/>
+        <TextBox Text="{Binding Stack, UpdateSourceTrigger=PropertyChanged}"/>
+        <CheckBox Content="Ante in play" IsChecked="{Binding Ante}" Margin="0,0,0,10"/>
+        <CheckBox Content="Need bubble / final-table ICM strategy" IsChecked="{Binding Icm}" Margin="0,0,0,16"/>
+        <Border Padding="14" Background="White" CornerRadius="6">
+          <StackPanel><TextBlock Text="{Binding Action}" FontSize="22" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Margin="0,10,0,0"/></StackPanel>
+        </Border>
+        <Button Content="Show floating result" Click="ShowOverlay" Margin="0,12,0,18"/>
+        <TextBlock Text="Capture preview" FontSize="18" FontWeight="Bold"/>
+        <TextBlock Text="Select PPPoker (Steam), then start. Keep it visible and unobstructed. Frames stay in memory." TextWrapping="Wrap" Margin="0,8,0,8"/>
+        <ComboBox x:Name="CaptureTargets" DisplayMemberPath="Title"/>
+        <WrapPanel><Button Content="Refresh windows" Click="RefreshWindows"/><Button x:Name="CaptureButton" Content="Start preview" Click="ToggleCapture"/></WrapPanel>
+        <TextBlock x:Name="CaptureStatus" Text="Capture stopped." TextWrapping="Wrap"/>
+      </StackPanel>
+    </ScrollViewer>
+    <TabControl Grid.Column="2">
+      <TabItem Header="Source chart"><ScrollViewer><Image Source="{Binding ChartImage}" Stretch="Uniform" VerticalAlignment="Top"/></ScrollViewer></TabItem>
+      <TabItem Header="Window preview"><Grid Background="#202124"><Image x:Name="Preview" Stretch="Uniform"/></Grid></TabItem>
+    </TabControl>
+  </Grid>
+</Window>
