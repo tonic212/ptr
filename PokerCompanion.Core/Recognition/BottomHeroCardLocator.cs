@@ -50,9 +50,24 @@ public sealed class BottomHeroCardLocator
                 Visit(x - 1, y); Visit(x + 1, y); Visit(x, y - 1); Visit(x, y + 1);
             }
             int w = maxX - minX + 1, h = maxY - minY + 1;
-            if (h >= table.Height * .04 && h <= table.Height * .12 && w >= 7 && w >= h * .16 && w <= h * .90
-                && minY > 0 && maxY < height - 1)
+            if (h < table.Height * .04 || h > table.Height * .12 || w < 7
+                || minY <= 0 || maxY >= height - 1) continue;
+            if (w >= h * .16 && w <= h * .90)
                 bodies.Add(new(left + minX, top + minY, w, h));
+            else if (w > h * .90 && w <= h * 1.45)
+            {
+                // Overlapping cards can share a continuous white top border.
+                // The fully exposed right card has the standard 0.64 width/height
+                // ratio; the left card exposes only its rank/suit strip. Both
+                // resulting corners still need unambiguous glyph recognition.
+                int secondWidth = (int)Math.Round(h * .64);
+                int firstWidth = w - secondWidth;
+                if (firstWidth >= h * .20 && firstWidth <= h * .80)
+                {
+                    bodies.Add(new(left + minX, top + minY, firstWidth, h));
+                    bodies.Add(new(left + minX + firstWidth, top + minY, secondWidth, h));
+                }
+            }
         }
         void Visit(int x, int y)
         {
