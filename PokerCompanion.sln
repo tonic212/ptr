@@ -6,12 +6,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PokerCompanion.Core", "Poke
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PokerCompanion.App", "PokerCompanion.App\PokerCompanion.App.csproj", "{54BB7600-2509-48BB-9583-0A954234EB63}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PokerCompanion.Core.Tests", "PokerCompanion.Core.Tests\PokerCompanion.Core.Tests.csproj", "{70B67F88-149C-4AE3-BC81-B72E54D0A488}"
+EndProject
 Global
  GlobalSection(SolutionConfigurationPlatforms) = preSolution
   Debug|Any CPU = Debug|Any CPU
   Release|Any CPU = Release|Any CPU
  EndGlobalSection
  GlobalSection(ProjectConfigurationPlatforms) = postSolution
+  {70B67F88-149C-4AE3-BC81-B72E54D0A488}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {70B67F88-149C-4AE3-BC81-B72E54D0A488}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {70B67F88-149C-4AE3-BC81-B72E54D0A488}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {70B67F88-149C-4AE3-BC81-B72E54D0A488}.Release|Any CPU.Build.0 = Release|Any CPU
   {A88D52C5-67C3-4AE6-9FBA-5C0408A64BEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
   {A88D52C5-67C3-4AE6-9FBA-5C0408A64BEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
   {A88D52C5-67C3-4AE6-9FBA-5C0408A64BEE}.Release|Any CPU.ActiveCfg = Release|Any CPU

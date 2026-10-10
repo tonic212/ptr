@@ -1,14 +1,15 @@
-<Window x:Class="PokerCompanion.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Poker Companion - chart prototype" Width="1180" Height="820" MinWidth="850" MinHeight="650" Background="#F3F4F6">
+<Window x:Class="PokerCompanion.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Poker Companion - calibrated recognition" Width="1180" Height="900" MinWidth="850" MinHeight="650" Background="#F3F4F6">
   <Grid Margin="20">
-    <Grid.ColumnDefinitions><ColumnDefinition Width="350"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="360"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
       <StackPanel>
         <TextBlock Text="Poker Companion" FontSize="26" FontWeight="Bold" Margin="0,0,0,8"/>
-        <TextBlock Text="Manual chart lookup + capture preview. Automatic recognition and equity are not implemented." TextWrapping="Wrap" Margin="0,0,0,16"/>
-        <TextBlock Text="Exact chart scenario"/>
+        <TextBlock Text="Card recognition + preflop chart lookup. Scenario, position, stack and street remain manual. No equity calculation." TextWrapping="Wrap" Margin="0,0,0,16"/>
+        <TextBlock Text="Exact preflop chart scenario"/>
         <ComboBox ItemsSource="{Binding Charts}" SelectedItem="{Binding SelectedChart}" DisplayMemberPath="Name"/>
+        <CheckBox Content="Use detected hand for chart lookup" IsChecked="{Binding UseDetectedHand}" Margin="0,0,0,8"/>
         <TextBlock Text="Hand class (AA, AKs, AKo)"/>
-        <TextBox Text="{Binding Hand, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBox Text="{Binding Hand, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding UseDetectedHand}"/>
         <TextBlock Text="Effective stack (BB)"/>
         <TextBox Text="{Binding Stack, UpdateSourceTrigger=PropertyChanged}"/>
         <CheckBox Content="Ante in play" IsChecked="{Binding Ante}" Margin="0,0,0,10"/>
@@ -17,16 +18,31 @@
           <StackPanel><TextBlock Text="{Binding Action}" FontSize="22" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Margin="0,10,0,0"/></StackPanel>
         </Border>
         <Button Content="Show floating result" Click="ShowOverlay" Margin="0,12,0,18"/>
-        <TextBlock Text="Capture preview" FontSize="18" FontWeight="Bold"/>
-        <TextBlock Text="Select PPPoker (Steam), then start. Keep it visible and unobstructed. Frames stay in memory." TextWrapping="Wrap" Margin="0,8,0,8"/>
+        <TextBlock Text="Capture and recognition" FontSize="18" FontWeight="Bold"/>
+        <TextBlock Text="Keep PPPoker visible and unobstructed. Calibrate the small rank and suit in each hole-card corner." TextWrapping="Wrap" Margin="0,8,0,8"/>
         <ComboBox x:Name="CaptureTargets" DisplayMemberPath="Title"/>
         <WrapPanel><Button Content="Refresh windows" Click="RefreshWindows"/><Button x:Name="CaptureButton" Content="Start preview" Click="ToggleCapture"/></WrapPanel>
-        <TextBlock x:Name="CaptureStatus" Text="Capture stopped." TextWrapping="Wrap"/>
+        <WrapPanel><Button x:Name="FreezeButton" Content="Freeze frame" Click="ToggleFreeze"/><Button Content="Load screenshot" Click="LoadScreenshot"/></WrapPanel>
+        <TextBlock x:Name="CaptureStatus" Text="Capture stopped." TextWrapping="Wrap" Margin="0,0,0,12"/>
+        <WrapPanel><Button Content="Calibrate card 1" Click="CalibrateFirst"/><Button Content="Calibrate card 2" Click="CalibrateSecond"/><Button Content="Cancel selection" Click="CancelSelection"/></WrapPanel>
+        <TextBlock Text="Drag a tight rectangle around the small rank AND suit. Exclude the large suit artwork and card borders." TextWrapping="Wrap" Margin="0,0,0,12"/>
+        <TextBlock Text="{Binding RecognizedCards}" FontSize="20" FontWeight="Bold" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding RecognitionStatus}" TextWrapping="Wrap" Margin="0,6,0,6"/>
+        <TextBlock Text="{Binding Coverage}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+        <TextBlock Text="Teach a frozen frame (e.g. 9c 6s)"/>
+        <TextBox x:Name="TeachCards" Text="9c 6s"/>
+        <Button Content="Teach visible cards" Click="TeachVisibleCards"/>
+        <TextBlock Text="T = ten. c/d/h/s = clubs/diamonds/hearts/spades. Calibration and learned symbols are saved locally." TextWrapping="Wrap"/>
       </StackPanel>
     </ScrollViewer>
-    <TabControl Grid.Column="2">
+    <TabControl x:Name="PreviewTabs" Grid.Column="2">
       <TabItem Header="Source chart"><ScrollViewer><Image Source="{Binding ChartImage}" Stretch="Uniform" VerticalAlignment="Top"/></ScrollViewer></TabItem>
-      <TabItem Header="Window preview"><Grid Background="#202124"><Image x:Name="Preview" Stretch="Uniform"/></Grid></TabItem>
+      <TabItem x:Name="WindowPreviewTab" Header="Window preview">
+        <Grid x:Name="PreviewHost" Background="#202124" MouseLeftButtonDown="SelectionDown" MouseMove="SelectionMove" MouseLeftButtonUp="SelectionUp">
+          <Image x:Name="Preview" Stretch="Uniform"/>
+          <Canvas IsHitTestVisible="False"><Rectangle x:Name="SelectionBox" Stroke="#FDE047" StrokeThickness="2" Fill="#30FDE047" Visibility="Collapsed"/></Canvas>
+        </Grid>
+      </TabItem>
     </TabControl>
   </Grid>
 </Window>

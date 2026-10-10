@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../PokerCompanion.Core/PokerCompanion.Core.csproj" />
+    <Content Include="sample-frame.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../PokerCompanion.App/Data/recognition-seeds.json" Link="recognition-seeds.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

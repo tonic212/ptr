@@ -1,4 +1,4 @@
-# Poker Companion - first Windows prototype
+# Poker Companion - Windows prototype with calibrated card recognition
 
 C# / WPF, .NET 8. Open PokerCompanion.sln in Visual Studio with the .NET desktop development workload and .NET 8 SDK. Set PokerCompanion.App as startup project. Build > Build Solution; press F5.
 
@@ -9,18 +9,27 @@ C# / WPF, .NET 8. Open PokerCompanion.sln in Visual Studio with the .NET desktop
 - Effective-stack, ante and ICM coverage guards.
 - Movable, topmost manual result window.
 - Explicit start/stop visible-window capture preview, including PPPoker (Steam).
+- Calibrated two-card recognition with 13 rank and four suit seed templates.
+- Frozen-frame/screenshot calibration and user teaching; saved local profile.
+- Three matching live frames required before a recognized hand feeds chart lookup.
 - Capture frames remain in memory; no upload, video storage or account connection.
 
 ## Not implemented
-Automatic card recognition, seat/position recognition, betting-history tracking, equity calculation, solver integration and exact tournament ICM. This version does not automatically recommend an action from captured frames. A PPPoker (Steam) table screenshot is needed for the next recognition/calibration stage.
+Seat/position recognition, board/street detection, betting-history tracking, equity calculation, solver integration and exact tournament ICM. Chart scenario, positions, street and stack must be set manually. Recognition only supplies your two-card hand class.
 
 ## Use
 1. Select the chart that matches the positions and prior actions.
-2. Enter a hand class: AA, AKs or AKo. Enter effective stack in BB.
+2. Enter effective stack in BB. For manual entry, uncheck **Use detected hand**, then enter AA, AKs or AKo.
 3. Confirm ante. If payout-sensitive ICM is required, tick that option; the app suppresses the chart prescription.
 4. Check the action against the source chart before trusting converted data.
 5. Show floating result to place the manually selected result beside your table.
 6. Refresh windows, select PPPoker (Steam), and start preview. Keep the target visible, unobstructed and restored. Stop preview when finished.
+
+7. Select **Freeze frame**, then **Calibrate card 1** and drag tightly around its small rank and small suit. Repeat for card 2. Exclude borders, the large central suit artwork and adjacent cards.
+8. If symbols remain uncertain, enter the actual visible pair (for example `9c 6s`; use T for ten and c/d/h/s for suits) and select **Teach visible cards**. Resume preview. Three consistent frames are required to accept a hand.
+9. **Load screenshot** supports calibration and teaching without a live table. It shows single-frame matches as static previews, without accepting them as live observations.
+
+Calibration is saved to `%LOCALAPPDATA%\PokerCompanion\recognition-profile.json`. Recalibrate after changing table layout or window proportions. Different rendering scales may need more teaching examples. Unknown, obstructed or ambiguous symbols clear the automatic hand/result. Template match scores are similarity measures, not calibrated probabilities of correctness. This version does not calculate equity or claim exact GTO recommendations.
 
 The preview captures the visible desktop rectangle of the selected window, including occluding windows. It does not capture hidden/minimized contents. There is no stealth, detection bypass, automated betting or memory/network interception.
 
@@ -41,3 +50,14 @@ White cells in facing-3-bet charts indicate hands outside the prior range, not n
 
 ## Validation and limitations
 Chart structure and image references were checked locally. Every chart has all 169 hand classes accounting for 1,326 card combinations. An OCR comparison fully matched action counts for 38 of 68 charts; the remaining 30 have incomplete or misread OCR and still require manual source comparison. All chart images are provided to support that review. Matching counts alone does not prove every hand cell is correct. C# syntax and XAML structure receive static checks when available, but the Linux generation environment has no .NET SDK or Windows desktop runtime: compilation, window capture and WPF rendering must be verified in Visual Studio on Windows. This is a prototype, not a validated production poker advisor.
+
+
+## Recognition checks
+GitHub Actions builds the WPF solution on Windows and runs the console regression suite. To run locally:
+
+```powershell
+dotnet build PokerCompanion.sln --configuration Release
+dotnet run --project PokerCompanion.Core.Tests --configuration Release --no-build
+```
+
+The suite uses an anonymous crop containing only two card corners. It checks temporal confirmation, stale-result clearing, resize behavior, ambiguous symbols, calibration mapping and hand-class normalization. Full table screenshots and player names are not included. Real window capture, overlay placement and UI calibration still require a Windows desktop check.
