@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -7,6 +8,14 @@ namespace PokerCompanion.App.Services.Recognition;
 
 public static class FrameAdapter
 {
+    public static BitmapSource CropSelectedTable(BitmapSource source, TableAreaSelection selection)
+    {
+        if (!selection.TryGetViewport(source.PixelWidth, source.PixelHeight, out TableViewport? table, out string reason))
+            throw new InvalidOperationException(reason);
+        var cropped = new CroppedBitmap(source, new Int32Rect(table!.X, table.Y, table.Width, table.Height));
+        cropped.Freeze(); return cropped;
+    }
+
     public static BitmapSource FocusTable(BitmapSource source)
     {
         if (source.PixelWidth / (double)source.PixelHeight < .85) return source;

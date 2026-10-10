@@ -36,6 +36,7 @@ public sealed class RecognitionProfile
     public int ReferenceHeight { get; set; }
     public CardRegion? FirstCard { get; set; }
     public CardRegion? SecondCard { get; set; }
+    public TableAreaSelection? TableArea { get; set; }
     public List<GlyphTemplate> Templates { get; set; } = new();
 }
 

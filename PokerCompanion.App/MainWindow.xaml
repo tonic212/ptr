@@ -23,6 +23,8 @@
         <CheckBox Content="Find bottom hero cards automatically" IsChecked="{Binding AutomaticHeroCards}" Margin="0,8,0,8"/>
         <ComboBox x:Name="CaptureTargets" DisplayMemberPath="Title"/>
         <WrapPanel><Button Content="Refresh windows" Click="RefreshWindows"/><Button x:Name="CaptureButton" Content="Start PPPoker preview" Click="ToggleCapture"/></WrapPanel>
+        <WrapPanel><Button Content="Select table area" Click="SelectTableArea"/><Button Content="Reset table area" Click="ResetTableArea"/></WrapPanel>
+        <TextBlock Text="If the preview includes your desktop, select the whole PPPoker table once. Automatic hero-card detection continues inside it." TextWrapping="Wrap" Margin="0,0,0,8"/>
         <WrapPanel><Button x:Name="FreezeButton" Content="Freeze frame" Click="ToggleFreeze"/><Button Content="Load screenshot" Click="LoadScreenshot"/></WrapPanel>
         <TextBlock x:Name="CaptureStatus" Text="Capture stopped." TextWrapping="Wrap" Margin="0,0,0,12"/>
         <WrapPanel><Button Content="Calibrate card 1" Click="CalibrateFirst"/><Button Content="Calibrate card 2" Click="CalibrateSecond"/><Button Content="Cancel selection" Click="CancelSelection"/></WrapPanel>
@@ -31,7 +33,7 @@
         <TextBlock Text="{Binding RecognitionStatus}" TextWrapping="Wrap" Margin="0,6,0,6"/>
         <TextBlock Text="{Binding Coverage}" TextWrapping="Wrap" Margin="0,0,0,12"/>
         <TextBlock Text="Teach a frozen frame (e.g. 9c 6s)"/>
-        <TextBox x:Name="TeachCards" Text="9c 6s"/>
+        <TextBox x:Name="TeachCards" ToolTip="Enter the actual two visible cards, for example 9c 6s."/>
         <Button Content="Teach visible cards" Click="TeachVisibleCards"/>
         <TextBlock Text="T = ten. c/d/h/s = clubs/diamonds/hearts/spades. Calibration and learned symbols are saved locally." TextWrapping="Wrap"/>
       </StackPanel>

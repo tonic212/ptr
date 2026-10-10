@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private CaptureTarget? _target;
     private OverlayWindow? _overlay;
     private BitmapSource? _lastFrame;
+    private BitmapSource? _rawFrame;
     private int _selectionSlot;
     private Point? _selectionStart;
     private bool _frozen;
@@ -41,7 +42,7 @@ public partial class MainWindow : Window
         catch (Exception ex) { MessageBox.Show(ex.Message, "Startup failed"); Close(); return; }
         _timer.Tick += CaptureFrame;
         Loaded += (_, _) => LoadWindows();
-        Closed += (_, _) => { _timer.Stop(); _overlay?.Close(); _lastFrame = null; Preview.Source = null; };
+        Closed += (_, _) => { _timer.Stop(); _overlay?.Close(); _lastFrame = null; _rawFrame = null; Preview.Source = null; };
     }
     private void LoadWindows()
     {
@@ -67,7 +68,8 @@ public partial class MainWindow : Window
         try
         {
             if (_target is null) return;
-            _lastFrame = FrameAdapter.FocusTable(_capture.Capture(_target)); Preview.Source = _lastFrame;
+            _rawFrame = _capture.Capture(_target);
+            _lastFrame = PrepareTableFrame(_rawFrame); Preview.Source = _lastFrame;
             if (_lastAutomaticMode != Model.AutomaticHeroCards) { _recognition.Reset(); _lastAutomaticMode = Model.AutomaticHeroCards; }
             Model.ApplyObservation(_recognition.Observe(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards));
             CaptureStatus.Text = $"Preview active: {_target.Title} ({_lastFrame.PixelWidth}×{_lastFrame.PixelHeight}). Frames remain in memory.";
@@ -78,7 +80,7 @@ public partial class MainWindow : Window
     {
         _timer.Stop(); _target = null; _frozen = false; CancelCalibration();
         CaptureTargets.IsEnabled = true; CaptureButton.Content = "Start PPPoker preview"; FreezeButton.Content = "Freeze frame";
-        CaptureStatus.Text = message; _lastFrame = null; Preview.Source = null;
+        CaptureStatus.Text = message; _lastFrame = null; _rawFrame = null; Preview.Source = null;
         ClearRecognition(message);
     }
     private void ToggleFreeze(object sender, RoutedEventArgs e)
@@ -100,12 +102,38 @@ public partial class MainWindow : Window
             var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad;
             image.StreamSource = stream; image.EndInit(); image.Freeze();
             if (image.PixelWidth > 8192 || image.PixelHeight > 8192) throw new InvalidOperationException("Screenshot is too large.");
-            _lastFrame = FrameAdapter.FocusTable(image); Preview.Source = _lastFrame; _frozen = true;
+            _rawFrame = image; _lastFrame = FrameAdapter.FocusTable(image); Preview.Source = _lastFrame; _frozen = true;
             PreviewTabs.SelectedItem = WindowPreviewTab;
             CaptureStatus.Text = "Screenshot loaded. Automatic mode looks for the bottom hero cards.";
             InspectStaticFrame();
         }
         catch (Exception ex) { StopCapture(ex.Message); }
+    }
+    private BitmapSource PrepareTableFrame(BitmapSource source) => _recognition.Profile.TableArea is TableAreaSelection selection
+        ? FrameAdapter.CropSelectedTable(source, selection) : FrameAdapter.FocusTable(source);
+
+    private void SelectTableArea(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            CancelCalibration();
+            if (_target is not null) _rawFrame = _capture.Capture(_target);
+            else if (_rawFrame is null && CaptureTargets.SelectedItem is CaptureTarget selected) _rawFrame = _capture.Capture(selected);
+            if (_rawFrame is null) { CaptureStatus.Text = "Start preview or load a screenshot first."; return; }
+            if (!_timer.IsEnabled) _frozen = true;
+            _lastFrame = _rawFrame; Preview.Source = _lastFrame;
+            PreviewTabs.SelectedItem = WindowPreviewTab; _selectionSlot = 3;
+            ClearRecognition("Drag around the ENTIRE PPPoker table in the preview, from its title bar to the bottom controls.");
+            CaptureStatus.Text = "Selecting table area. The full capture is held still while you draw.";
+        }
+        catch (Exception ex) { CaptureStatus.Text = ex.Message; }
+    }
+    private void ResetTableArea(object sender, RoutedEventArgs e)
+    {
+        CancelCalibration(); _recognition.Profile.TableArea = null; _profileStore.Save(_recognition.Profile);
+        ClearRecognition("Table area cleared. Automatic table location restored.");
+        if (_rawFrame is not null) { _lastFrame = FrameAdapter.FocusTable(_rawFrame); Preview.Source = _lastFrame; }
+        if (_frozen) InspectStaticFrame(); else CaptureFrame(this, EventArgs.Empty);
     }
     private void CalibrateFirst(object sender, RoutedEventArgs e) => BeginCalibration(1);
     private void CalibrateSecond(object sender, RoutedEventArgs e) => BeginCalibration(2);
@@ -147,7 +175,19 @@ public partial class MainWindow : Window
         {
             CardRegion? region = PreviewCoordinateMapper.Map(start.X, start.Y, end.X, end.Y,
                 PreviewHost.ActualWidth, PreviewHost.ActualHeight, _lastFrame.PixelWidth, _lastFrame.PixelHeight);
-            if (region is null) throw new InvalidOperationException("Select at least a 5×12 pixel corner, inside the image.");
+            if (region is null) throw new InvalidOperationException("Select a rectangle inside the image.");
+            if (slot == 3)
+            {
+                var selection = new TableAreaSelection(region, _lastFrame.PixelWidth, _lastFrame.PixelHeight);
+                BitmapSource table = FrameAdapter.CropSelectedTable(_lastFrame, selection);
+                _recognition.Profile.TableArea = selection; _profileStore.Save(_recognition.Profile);
+                Model.AutomaticHeroCards = true; _lastAutomaticMode = true;
+                _lastFrame = table; Preview.Source = table;
+                ClearRecognition("Table area saved. Finding bottom hero cards automatically.");
+                CaptureStatus.Text = "Table area saved. Select it again if you move or resize PPPoker within the capture.";
+                if (_frozen || !_timer.IsEnabled) InspectStaticFrame(); else CaptureFrame(this, EventArgs.Empty);
+                e.Handled = true; return;
+            }
             // Reject a bad selection before saving it.
             _ = new CardGlyphExtractor().Extract(FrameAdapter.ToPixels(_lastFrame), region);
             _recognition.SetRegion(slot, region, _lastFrame.PixelWidth, _lastFrame.PixelHeight);

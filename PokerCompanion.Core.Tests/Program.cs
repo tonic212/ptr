@@ -113,4 +113,12 @@ foreach (JsonElement item in automaticFixtures.RootElement.EnumerateArray())
 Check(!new PokerTableLocator().TryLocate(new PixelFrame(800, 600, new byte[800 * 600 * 4]), out _, out _), "desktop without table rejected");
 foreach (var template in profile.Templates)
     Check(matcher.Match(template.Mask, template.Kind, profile.Templates).Label == template.Label, "seed separates labels: " + template.Label);
+var selectedArea = new TableAreaSelection(new(.10, .10, .20, .60), 1920, 1080);
+Check(selectedArea.TryGetViewport(1920, 1080, out var selectedViewport, out _) && selectedViewport == new TableViewport(192, 108, 384, 648), "selected table pixel bounds");
+Check(selectedArea.TryGetViewport(3840, 2160, out var scaledViewport, out _) && scaledViewport == new TableViewport(384, 216, 768, 1296), "selected table scales with capture");
+Check(!selectedArea.TryGetViewport(1080, 1920, out _, out _), "selected area rejects aspect change");
+Check(!new TableAreaSelection(new(0, 0, 1, 1), 1920, 1080).TryGetViewport(1920, 1080, out _, out _), "desktop-sized selection rejected");
+Check(!new TableAreaSelection(new(.9, 0, .2, .5), 1920, 1080).TryGetViewport(1920, 1080, out _, out _), "outside table selection rejected");
+string savedProfile = JsonSerializer.Serialize(new RecognitionProfile { TableArea = selectedArea });
+Check(JsonSerializer.Deserialize<RecognitionProfile>(savedProfile)!.TableArea == selectedArea, "table selection persists independently of glyph calibration");
 Console.WriteLine($"PASS: {assertions} recognition assertions.");
