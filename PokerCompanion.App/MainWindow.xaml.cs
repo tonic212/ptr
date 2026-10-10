@@ -67,7 +67,7 @@ public partial class MainWindow : Window
         try
         {
             if (_target is null) return;
-            _lastFrame = _capture.Capture(_target); Preview.Source = _lastFrame;
+            _lastFrame = FrameAdapter.FocusTable(_capture.Capture(_target)); Preview.Source = _lastFrame;
             if (_lastAutomaticMode != Model.AutomaticHeroCards) { _recognition.Reset(); _lastAutomaticMode = Model.AutomaticHeroCards; }
             Model.ApplyObservation(_recognition.Observe(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards));
             CaptureStatus.Text = $"Preview active: {_target.Title} ({_lastFrame.PixelWidth}×{_lastFrame.PixelHeight}). Frames remain in memory.";
@@ -100,7 +100,7 @@ public partial class MainWindow : Window
             var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad;
             image.StreamSource = stream; image.EndInit(); image.Freeze();
             if (image.PixelWidth > 8192 || image.PixelHeight > 8192) throw new InvalidOperationException("Screenshot is too large.");
-            _lastFrame = image; Preview.Source = image; _frozen = true;
+            _lastFrame = FrameAdapter.FocusTable(image); Preview.Source = _lastFrame; _frozen = true;
             PreviewTabs.SelectedItem = WindowPreviewTab;
             CaptureStatus.Text = "Screenshot loaded. Automatic mode looks for the bottom hero cards.";
             InspectStaticFrame();
