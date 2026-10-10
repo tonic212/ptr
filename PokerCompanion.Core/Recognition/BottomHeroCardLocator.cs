@@ -88,10 +88,10 @@ public sealed class BottomHeroCardLocator
                 if (count >= (y2 - y1) * .85) { edge = x; break; }
             }
             if (edge < 0) return null;
-            int inset = Math.Max(1, (int)Math.Round(commonHeight / 44.0));
+            int inset = Math.Max(1, (int)Math.Floor(commonHeight / 44.0));
             int x0 = edge + inset, y0 = body.Y + inset * 2;
             int w = Math.Min(body.X + body.Width - x0 - inset, (int)Math.Round(commonHeight * .30));
-            int h = (int)Math.Round(commonHeight * .60);
+            int h = (int)Math.Floor(commonHeight * .60);
             if (w < 5 || h < 12) return null;
             return new(x0 / (double)frame.Width, y0 / (double)frame.Height, w / (double)frame.Width, h / (double)frame.Height);
         }
