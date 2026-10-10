@@ -10,10 +10,19 @@ public sealed class BottomHeroCardLocator
 
     public bool TryLocate(PixelFrame frame, out HeroCardRegions? regions, out string reason)
     {
+        if (frame.Width / (double)frame.Height < .85)
+            return TryLocateInTable(frame, new(0, 0, frame.Width, frame.Height), out regions, out reason);
+        regions = null;
+        if (!new PokerTableLocator().TryLocate(frame, out TableViewport? table, out reason)) return false;
+        return TryLocateInTable(frame, table!, out regions, out reason);
+    }
+
+    private bool TryLocateInTable(PixelFrame frame, TableViewport table, out HeroCardRegions? regions, out string reason)
+    {
         regions = null;
         reason = "Waiting for two face-up cards at the bottom hero seat. Keep the table unobstructed.";
-        int left = (int)(frame.Width * .32), right = (int)(frame.Width * .83);
-        int top = (int)(frame.Height * .70), bottom = (int)(frame.Height * .92);
+        int left = table.X + (int)(table.Width * .32), right = table.X + (int)(table.Width * .83);
+        int top = table.Y + (int)(table.Height * .70), bottom = table.Y + (int)(table.Height * .92);
         int width = right - left, height = bottom - top;
         if (width < 20 || height < 20) return false;
         var light = new bool[width * height];
@@ -41,7 +50,7 @@ public sealed class BottomHeroCardLocator
                 Visit(x - 1, y); Visit(x + 1, y); Visit(x, y - 1); Visit(x, y + 1);
             }
             int w = maxX - minX + 1, h = maxY - minY + 1;
-            if (h >= frame.Height * .04 && h <= frame.Height * .12 && w >= 7 && w >= h * .16 && w <= h * .90
+            if (h >= table.Height * .04 && h <= table.Height * .12 && w >= 7 && w >= h * .16 && w <= h * .90
                 && minY > 0 && maxY < height - 1)
                 bodies.Add(new(left + minX, top + minY, w, h));
         }

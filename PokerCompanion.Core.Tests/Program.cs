@@ -90,6 +90,18 @@ foreach (JsonElement item in automaticFixtures.RootElement.EnumerateArray())
             Array.Copy(automaticFrame.Bgra, ((y / 2) * automaticFrame.Width + x / 2) * 4, doubled, (y * automaticFrame.Width * 2 + x) * 4, 4);
     var resized = new PixelFrame(automaticFrame.Width * 2, automaticFrame.Height * 2, doubled);
     Check(automaticSession.Inspect(resized, true).Cards == expected, "automatic resized table: " + expected);
+    // Same table inside a desktop-sized host rectangle, at two different offsets.
+    foreach (var offset in new[] { (X: 60, Y: 100), (X: 950, Y: 250) })
+    {
+        const int desktopWidth = 1920, desktopHeight = 1080;
+        byte[] desktop = new byte[desktopWidth * desktopHeight * 4];
+        for (int y = 0; y < automaticFrame.Height; y++)
+            Array.Copy(automaticFrame.Bgra, y * automaticFrame.Width * 4, desktop,
+                ((y + offset.Y) * desktopWidth + offset.X) * 4, automaticFrame.Width * 4);
+        var desktopFrame = new PixelFrame(desktopWidth, desktopHeight, desktop);
+        Check(new PokerTableLocator().TryLocate(desktopFrame, out _, out _), "table inside desktop located");
+        Check(automaticSession.Inspect(desktopFrame, true).Cards == expected, "hero in desktop capture: " + expected);
+    }
     byte[] oneCard = automaticFrame.Bgra.ToArray();
     CardRegion second = regions!.Second;
     int eraseX = (int)Math.Floor(second.X * automaticFrame.Width) - 2;
@@ -98,6 +110,7 @@ foreach (JsonElement item in automaticFixtures.RootElement.EnumerateArray())
             Array.Clear(oneCard, (y * automaticFrame.Width + x) * 4, 4);
     Check(!locator.TryLocate(new PixelFrame(automaticFrame.Width, automaticFrame.Height, oneCard), out _, out _), "single card rejected");
 }
+Check(!new PokerTableLocator().TryLocate(new PixelFrame(800, 600, new byte[800 * 600 * 4]), out _, out _), "desktop without table rejected");
 foreach (var template in profile.Templates)
     Check(matcher.Match(template.Mask, template.Kind, profile.Templates).Label == template.Label, "seed separates labels: " + template.Label);
 Console.WriteLine($"PASS: {assertions} recognition assertions.");

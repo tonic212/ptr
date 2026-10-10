@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -48,7 +47,7 @@ public partial class MainWindow : Window
     {
         var windows = _capture.ListWindows(new WindowInteropHelper(this).Handle);
         CaptureTargets.ItemsSource = windows;
-        CaptureTargets.SelectedItem = windows.FirstOrDefault(w => w.Title.StartsWith("PPPoker", StringComparison.OrdinalIgnoreCase));
+        CaptureTargets.SelectedItem = _capture.FindPokerWindow(windows);
     }
     private void RefreshWindows(object sender, RoutedEventArgs e) => LoadWindows();
     private void ToggleCapture(object sender, RoutedEventArgs e)
@@ -56,7 +55,7 @@ public partial class MainWindow : Window
         if (_timer.IsEnabled) { StopCapture("Capture stopped."); return; }
         if (CaptureTargets.SelectedItem is not CaptureTarget) LoadWindows();
         if (CaptureTargets.SelectedItem is not CaptureTarget target) { CaptureStatus.Text = "Open PPPoker first, or select its window."; return; }
-        if (target.Title.StartsWith("PPPoker", StringComparison.OrdinalIgnoreCase)) _capture.Focus(target);
+        if (ScreenCaptureService.IsPokerTitle(target.Title)) _capture.Focus(target);
         _target = target; _frozen = false; FreezeButton.Content = "Freeze frame";
         CaptureTargets.IsEnabled = false; CaptureButton.Content = "Stop preview";
         _lastAutomaticMode = Model.AutomaticHeroCards; _recognition.Reset(); _timer.Start(); PreviewTabs.SelectedItem = WindowPreviewTab;
@@ -71,7 +70,7 @@ public partial class MainWindow : Window
             _lastFrame = _capture.Capture(_target); Preview.Source = _lastFrame;
             if (_lastAutomaticMode != Model.AutomaticHeroCards) { _recognition.Reset(); _lastAutomaticMode = Model.AutomaticHeroCards; }
             Model.ApplyObservation(_recognition.Observe(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards));
-            CaptureStatus.Text = $"Preview active: {_target.Title}. Frames remain in memory.";
+            CaptureStatus.Text = $"Preview active: {_target.Title} ({_lastFrame.PixelWidth}×{_lastFrame.PixelHeight}). Frames remain in memory.";
         }
         catch (Exception ex) { StopCapture(ex.Message); }
     }

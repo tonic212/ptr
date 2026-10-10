@@ -18,6 +18,7 @@ public sealed class ScreenCaptureService
     [StructLayout(LayoutKind.Sequential)]
     private struct Rect { public int Left, Top, Right, Bottom; }
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowProc callback, IntPtr parameter);
+    [DllImport("user32.dll")] private static extern bool EnumChildWindows(IntPtr parent, EnumWindowProc callback, IntPtr parameter);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int count);
@@ -29,8 +30,9 @@ public sealed class ScreenCaptureService
 
     public bool Focus(CaptureTarget target)
     {
-        if (IsIconic(target.Handle)) ShowWindow(target.Handle, 9);
-        return SetForegroundWindow(target.Handle);
+        IntPtr root = GetAncestor(target.Handle, 2);
+        if (IsIconic(root)) ShowWindow(root, 9);
+        return SetForegroundWindow(root);
     }
 
     public IReadOnlyList<CaptureTarget> ListWindows(IntPtr ownWindow)
@@ -42,10 +44,37 @@ public sealed class ScreenCaptureService
             var title = new StringBuilder(512);
             GetWindowText(hwnd, title, title.Capacity);
             if (title.Length > 0) windows.Add(new(hwnd, title.ToString()));
+            if (IsPokerTitle(title.ToString()))
+                EnumChildWindows(hwnd, (child, _) =>
+                {
+                    if (!IsWindowVisible(child)) return true;
+                    var caption = new StringBuilder(512); GetWindowText(child, caption, caption.Capacity);
+                    if (IsPokerTitle(caption.ToString()) && GetWindowRect(child, out Rect childRect)
+                        && childRect.Right - childRect.Left >= 180 && childRect.Bottom - childRect.Top >= 300)
+                        windows.Add(new(child, caption.ToString()));
+                    return true;
+                }, IntPtr.Zero);
             return true;
         }, IntPtr.Zero);
         windows.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Title, b.Title));
         return windows;
+    }
+    public static bool IsPokerTitle(string title) => title.TrimStart().StartsWith("PPPoker", StringComparison.OrdinalIgnoreCase);
+
+    public CaptureTarget? FindPokerWindow(IReadOnlyList<CaptureTarget> windows)
+    {
+        CaptureTarget? best = null; double bestScore = double.MinValue;
+        foreach (CaptureTarget window in windows)
+        {
+            if (!IsPokerTitle(window.Title) || !GetWindowRect(window.Handle, out Rect rect)) continue;
+            int width = rect.Right - rect.Left, height = rect.Bottom - rect.Top;
+            if (width <= 0 || height <= 0) continue;
+            double score = window.Title.Contains("-v", StringComparison.OrdinalIgnoreCase) ? 10 : 0;
+            if (width / (double)height is >= .30 and <= .85) score += 20;
+            if (IsIconic(window.Handle)) score -= 5;
+            if (score > bestScore) { best = window; bestScore = score; }
+        }
+        return best;
     }
     public BitmapSource Capture(CaptureTarget target)
     {
