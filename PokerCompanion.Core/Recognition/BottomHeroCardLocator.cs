@@ -6,7 +6,7 @@ public sealed record HeroCardRegions(CardRegion First, CardRegion Second);
 // symbols, so locating a card does not depend on knowing its rank or suit.
 public sealed class BottomHeroCardLocator
 {
-    private sealed record Body(int X, int Y, int Width, int Height);
+    private sealed record Body(int X, int Y, int Width, int Height, bool Touching = false);
 
     public bool TryLocate(PixelFrame frame, out HeroCardRegions? regions, out string reason)
     {
@@ -64,8 +64,8 @@ public sealed class BottomHeroCardLocator
                 int firstWidth = w - secondWidth;
                 if (firstWidth >= h * .20 && firstWidth <= h * .80)
                 {
-                    bodies.Add(new(left + minX, top + minY, firstWidth, h));
-                    bodies.Add(new(left + minX + firstWidth, top + minY, secondWidth, h));
+                    bodies.Add(new(left + minX, top + minY, firstWidth, h, true));
+                    bodies.Add(new(left + minX + firstWidth, top + minY, secondWidth, h, true));
                 }
             }
         }
@@ -112,7 +112,7 @@ public sealed class BottomHeroCardLocator
                 if (count >= (y2 - y1) * .85) { edge = x; break; }
             }
             if (edge < 0) return null;
-            int inset = Math.Max(1, (int)Math.Floor(commonHeight / 44.0));
+            int inset = Math.Max(1, (int)Math.Floor(commonHeight / (body.Touching ? 69.0 : 44.0)));
             int x0 = edge + inset, y0 = body.Y + inset * 2;
             int w = Math.Min(body.X + body.Width - x0 - inset, (int)Math.Round(commonHeight * .30));
             int h = (int)Math.Floor(commonHeight * .60);
