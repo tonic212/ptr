@@ -24,6 +24,14 @@ public sealed class ScreenCaptureService
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
     [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hwnd, int command);
+    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hwnd);
+
+    public bool Focus(CaptureTarget target)
+    {
+        if (IsIconic(target.Handle)) ShowWindow(target.Handle, 9);
+        return SetForegroundWindow(target.Handle);
+    }
 
     public IReadOnlyList<CaptureTarget> ListWindows(IntPtr ownWindow)
     {

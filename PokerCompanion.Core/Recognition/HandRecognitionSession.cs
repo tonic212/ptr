@@ -4,6 +4,7 @@ public sealed class HandRecognitionSession
 {
     private readonly CardGlyphExtractor _extractor = new();
     private readonly TemplateMatcher _matcher = new();
+    private readonly BottomHeroCardLocator _locator = new();
     private string _candidate = "";
     private int _frames;
     public RecognitionProfile Profile { get; }
@@ -29,9 +30,9 @@ public sealed class HandRecognitionSession
 
     public void Reset() { _candidate = ""; _frames = 0; }
 
-    public HandObservation Observe(PixelFrame frame)
+    public HandObservation Observe(PixelFrame frame, bool automatic = false)
     {
-        HandObservation result = Inspect(frame);
+        HandObservation result = Inspect(frame, automatic);
         if (!result.Success) return Unknown(result.Status);
         if (result.Cards == _candidate) _frames++; else { _candidate = result.Cards; _frames = 1; }
         if (_frames < 3) return new(false, "", "", $"Checking consistent frames ({_frames}/3).");
@@ -40,13 +41,19 @@ public sealed class HandRecognitionSession
 
     // Single-frame inspection is useful for screenshot calibration and teaching.
     // It does not count as a temporal confirmation.
-    public HandObservation Inspect(PixelFrame frame)
+    public HandObservation Inspect(PixelFrame frame, bool automatic = false)
     {
         try
         {
-            ValidateFrame(frame);
-            CardGlyphs a = _extractor.Extract(frame, Profile.FirstCard!);
-            CardGlyphs b = _extractor.Extract(frame, Profile.SecondCard!);
+            HeroCardRegions regions;
+            if (automatic)
+            {
+                if (!_locator.TryLocate(frame, out HeroCardRegions? located, out string reason)) return Unknown(reason);
+                regions = located!;
+            }
+            else regions = ResolveRegions(frame, false);
+            CardGlyphs a = _extractor.Extract(frame, regions.First);
+            CardGlyphs b = _extractor.Extract(frame, regions.Second);
             GlyphMatch ar = _matcher.Match(a.Rank, "rank", Profile.Templates), ass = _matcher.Match(a.Suit, "suit", Profile.Templates);
             GlyphMatch br = _matcher.Match(b.Rank, "rank", Profile.Templates), bs = _matcher.Match(b.Suit, "suit", Profile.Templates);
             GlyphMatch? failed = new[] { ar, ass, br, bs }.FirstOrDefault(x => !x.Success);
@@ -60,13 +67,13 @@ public sealed class HandRecognitionSession
         catch (ArgumentException ex) { return Unknown(ex.Message); }
     }
 
-    public void Teach(PixelFrame frame, string cards)
+    public void Teach(PixelFrame frame, string cards, bool automatic = false)
     {
-        ValidateFrame(frame);
+        HeroCardRegions regions = ResolveRegions(frame, automatic);
         string[] parts = cards.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2 || parts.Any(p => p.Length != 2 || !"akqjt98765432".Contains(p[0]) || !"cdhs".Contains(p[1])) || parts[0] == parts[1])
             throw new ArgumentException("Enter two distinct cards, for example 9c 6s. Use T for ten and c/d/h/s for suits.");
-        CardGlyphs first = _extractor.Extract(frame, Profile.FirstCard!), second = _extractor.Extract(frame, Profile.SecondCard!);
+        CardGlyphs first = _extractor.Extract(frame, regions.First), second = _extractor.Extract(frame, regions.Second);
         Add("rank", char.ToUpperInvariant(parts[0][0]).ToString(), first.Rank);
         Add("suit", parts[0][1].ToString(), first.Suit);
         Add("rank", char.ToUpperInvariant(parts[1][0]).ToString(), second.Rank);
@@ -80,6 +87,16 @@ public sealed class HandRecognitionSession
         var existing = Profile.Templates.Where(t => t.Kind == kind && t.Label == label).ToList();
         if (existing.Count >= 8) Profile.Templates.Remove(existing[0]);
         Profile.Templates.Add(new() { Kind = kind, Label = label, Mask = mask });
+    }
+    private HeroCardRegions ResolveRegions(PixelFrame frame, bool automatic)
+    {
+        if (automatic)
+        {
+            if (_locator.TryLocate(frame, out HeroCardRegions? regions, out string reason)) return regions!;
+            throw new InvalidOperationException(reason);
+        }
+        ValidateFrame(frame);
+        return new(Profile.FirstCard!, Profile.SecondCard!);
     }
     private void ValidateFrame(PixelFrame frame)
     {

@@ -16,9 +16,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public IReadOnlyList<Chart> Charts { get; }
     private Chart? _selectedChart;
     private string _hand = "", _stack = "100", _action = "", _explanation = "";
-    private string _recognizedCards = "No current hand", _recognitionStatus = "Start preview, then calibrate both card corners.", _coverage = "";
+    private string _recognizedCards = "No current hand", _recognitionStatus = "Start preview to find the bottom hero cards automatically.", _coverage = "";
     private string? _lastRecognizedHand;
-    private bool _ante = true, _icm, _useDetectedHand = true;
+    private bool _ante = true, _icm, _useDetectedHand = true, _automaticHeroCards = true;
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public MainViewModel()
@@ -36,6 +36,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         get => _useDetectedHand;
         set { _useDetectedHand = value; Notify(); if (value) Hand = _lastRecognizedHand ?? ""; Update(); }
+    }
+    public bool AutomaticHeroCards
+    {
+        get => _automaticHeroCards;
+        set
+        {
+            if (_automaticHeroCards == value) return;
+            _automaticHeroCards = value; Notify();
+            ApplyObservation(new(false, "", "", value ? "Finding the bottom hero cards automatically." : "Manual card calibration selected."));
+        }
     }
     public string Action { get => _action; private set { _action = value; Notify(); } }
     public string Explanation { get => _explanation; private set { _explanation = value; Notify(); } }

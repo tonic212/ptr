@@ -1,4 +1,4 @@
-<Window x:Class="PokerCompanion.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Poker Companion - calibrated recognition" Width="1180" Height="900" MinWidth="850" MinHeight="650" Background="#F3F4F6">
+<Window x:Class="PokerCompanion.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Poker Companion - automatic hero recognition" Width="1180" Height="900" MinWidth="850" MinHeight="650" Background="#F3F4F6">
   <Grid Margin="20">
     <Grid.ColumnDefinitions><ColumnDefinition Width="360"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -19,13 +19,14 @@
         </Border>
         <Button Content="Show floating result" Click="ShowOverlay" Margin="0,12,0,18"/>
         <TextBlock Text="Capture and recognition" FontSize="18" FontWeight="Bold"/>
-        <TextBlock Text="Keep PPPoker visible and unobstructed. Calibrate the small rank and suit in each hole-card corner." TextWrapping="Wrap" Margin="0,8,0,8"/>
+        <TextBlock Text="Keep PPPoker visible and unobstructed. Automatic mode finds the two face-up cards at the bottom hero seat." TextWrapping="Wrap" Margin="0,8,0,8"/>
+        <CheckBox Content="Find bottom hero cards automatically" IsChecked="{Binding AutomaticHeroCards}" Margin="0,8,0,8"/>
         <ComboBox x:Name="CaptureTargets" DisplayMemberPath="Title"/>
-        <WrapPanel><Button Content="Refresh windows" Click="RefreshWindows"/><Button x:Name="CaptureButton" Content="Start preview" Click="ToggleCapture"/></WrapPanel>
+        <WrapPanel><Button Content="Refresh windows" Click="RefreshWindows"/><Button x:Name="CaptureButton" Content="Start PPPoker preview" Click="ToggleCapture"/></WrapPanel>
         <WrapPanel><Button x:Name="FreezeButton" Content="Freeze frame" Click="ToggleFreeze"/><Button Content="Load screenshot" Click="LoadScreenshot"/></WrapPanel>
         <TextBlock x:Name="CaptureStatus" Text="Capture stopped." TextWrapping="Wrap" Margin="0,0,0,12"/>
         <WrapPanel><Button Content="Calibrate card 1" Click="CalibrateFirst"/><Button Content="Calibrate card 2" Click="CalibrateSecond"/><Button Content="Cancel selection" Click="CancelSelection"/></WrapPanel>
-        <TextBlock Text="Drag a tight rectangle around the small rank AND suit. Exclude the large suit artwork and card borders." TextWrapping="Wrap" Margin="0,0,0,12"/>
+        <TextBlock Text="Manual fallback: calibrating a card turns off automatic location. Drag around the small rank and suit, excluding large artwork." TextWrapping="Wrap" Margin="0,0,0,12"/>
         <TextBlock Text="{Binding RecognizedCards}" FontSize="20" FontWeight="Bold" TextWrapping="Wrap"/>
         <TextBlock Text="{Binding RecognitionStatus}" TextWrapping="Wrap" Margin="0,6,0,6"/>
         <TextBlock Text="{Binding Coverage}" TextWrapping="Wrap" Margin="0,0,0,12"/>

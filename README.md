@@ -1,4 +1,4 @@
-# Poker Companion - Windows prototype with calibrated card recognition
+# Poker Companion - automatic bottom-seat hero recognition
 
 C# / WPF, .NET 8. Open PokerCompanion.sln in Visual Studio with the .NET desktop development workload and .NET 8 SDK. Set PokerCompanion.App as startup project. Build > Build Solution; press F5.
 
@@ -9,7 +9,8 @@ C# / WPF, .NET 8. Open PokerCompanion.sln in Visual Studio with the .NET desktop
 - Effective-stack, ante and ICM coverage guards.
 - Movable, topmost manual result window.
 - Explicit start/stop visible-window capture preview, including PPPoker (Steam).
-- Calibrated two-card recognition with 13 rank and four suit seed templates.
+- Automatic bottom-seat card location with 13 rank and four suit seed templates.
+- PPPoker window selected automatically when available; Start PPPoker preview requests focus once.
 - Frozen-frame/screenshot calibration and user teaching; saved local profile.
 - Three matching live frames required before a recognized hand feeds chart lookup.
 - Capture frames remain in memory; no upload, video storage or account connection.
@@ -25,9 +26,10 @@ Seat/position recognition, board/street detection, betting-history tracking, equ
 5. Show floating result to place the manually selected result beside your table.
 6. Refresh windows, select PPPoker (Steam), and start preview. Keep the target visible, unobstructed and restored. Stop preview when finished.
 
-7. Select **Freeze frame**, then **Calibrate card 1** and drag tightly around its small rank and small suit. Repeat for card 2. Exclude borders, the large central suit artwork and adjacent cards.
-8. If symbols remain uncertain, enter the actual visible pair (for example `9c 6s`; use T for ten and c/d/h/s for suits) and select **Teach visible cards**. Resume preview. Three consistent frames are required to accept a hand.
-9. **Load screenshot** supports calibration and teaching without a live table. It shows single-frame matches as static previews, without accepting them as live observations.
+7. Leave **Find bottom hero cards automatically** checked (default). No calibration is needed for the supplied portrait table layout: the locator searches for two face-up card backgrounds at the bottom seat. It relocates them each frame and after resizing. The detector does not infer your seat in other layouts.
+8. If automatic location fails on another layout, select **Freeze frame**, then **Calibrate card 1** and drag tightly around its small rank and small suit. Repeat for card 2. This selects manual mode. Exclude borders, the large central suit artwork and adjacent cards.
+9. If symbols remain uncertain, enter the actual visible pair (for example `9c 6s`; use T for ten and c/d/h/s for suits) and select **Teach visible cards**. Resume preview. Three consistent frames are required to accept a hand.
+10. **Load screenshot** supports calibration and teaching without a live table. It shows single-frame matches as static previews, without accepting them as live observations.
 
 Calibration is saved to `%LOCALAPPDATA%\PokerCompanion\recognition-profile.json`. Recalibrate after changing table layout or window proportions. Different rendering scales may need more teaching examples. Unknown, obstructed or ambiguous symbols clear the automatic hand/result. Template match scores are similarity measures, not calibrated probabilities of correctness. This version does not calculate equity or claim exact GTO recommendations.
 
@@ -60,4 +62,6 @@ dotnet build PokerCompanion.sln --configuration Release
 dotnet run --project PokerCompanion.Core.Tests --configuration Release --no-build
 ```
 
-The suite uses an anonymous crop containing only two card corners. It checks temporal confirmation, stale-result clearing, resize behavior, ambiguous symbols, calibration mapping and hand-class normalization. Full table screenshots and player names are not included. Real window capture, overlay placement and UI calibration still require a Windows desktop check.
+The suite uses anonymous card crops against plain table-sized backgrounds plus a two-corner fixture. It checks automatic bottom-seat location on four table samples (9c 6s, 5s 8c, As 6c, Js 5c), resizing and single-card rejection, temporal confirmation, stale-result clearing, resize behavior, ambiguous symbols, calibration mapping and hand-class normalization. Full table screenshots and player names are not included. Real window capture, overlay placement and UI calibration still require a Windows desktop check.
+
+Automatic location requires a visible portrait table and two separated neutral/light card backgrounds within the bottom seat search area. Covered cards, unusual skins, hand-history screens and overlapping windows may fail detection. Symbol matching remains template based and can still need teaching for other font/rendering scales. Automatic location does not calculate equity, identify board/street or select a chart scenario.

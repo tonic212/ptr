@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -25,6 +26,7 @@ public partial class MainWindow : Window
     private int _selectionSlot;
     private Point? _selectionStart;
     private bool _frozen;
+    private bool _lastAutomaticMode;
     private MainViewModel Model => (MainViewModel)DataContext;
 
     public MainWindow()
@@ -42,15 +44,22 @@ public partial class MainWindow : Window
         Loaded += (_, _) => LoadWindows();
         Closed += (_, _) => { _timer.Stop(); _overlay?.Close(); _lastFrame = null; Preview.Source = null; };
     }
-    private void LoadWindows() => CaptureTargets.ItemsSource = _capture.ListWindows(new WindowInteropHelper(this).Handle);
+    private void LoadWindows()
+    {
+        var windows = _capture.ListWindows(new WindowInteropHelper(this).Handle);
+        CaptureTargets.ItemsSource = windows;
+        CaptureTargets.SelectedItem = windows.FirstOrDefault(w => w.Title.StartsWith("PPPoker", StringComparison.OrdinalIgnoreCase));
+    }
     private void RefreshWindows(object sender, RoutedEventArgs e) => LoadWindows();
     private void ToggleCapture(object sender, RoutedEventArgs e)
     {
         if (_timer.IsEnabled) { StopCapture("Capture stopped."); return; }
-        if (CaptureTargets.SelectedItem is not CaptureTarget target) { CaptureStatus.Text = "Select a window first."; return; }
+        if (CaptureTargets.SelectedItem is not CaptureTarget) LoadWindows();
+        if (CaptureTargets.SelectedItem is not CaptureTarget target) { CaptureStatus.Text = "Open PPPoker first, or select its window."; return; }
+        if (target.Title.StartsWith("PPPoker", StringComparison.OrdinalIgnoreCase)) _capture.Focus(target);
         _target = target; _frozen = false; FreezeButton.Content = "Freeze frame";
         CaptureTargets.IsEnabled = false; CaptureButton.Content = "Stop preview";
-        _recognition.Reset(); _timer.Start(); PreviewTabs.SelectedItem = WindowPreviewTab;
+        _lastAutomaticMode = Model.AutomaticHeroCards; _recognition.Reset(); _timer.Start(); PreviewTabs.SelectedItem = WindowPreviewTab;
         CaptureFrame(this, EventArgs.Empty);
     }
     private void CaptureFrame(object? sender, EventArgs e)
@@ -60,7 +69,8 @@ public partial class MainWindow : Window
         {
             if (_target is null) return;
             _lastFrame = _capture.Capture(_target); Preview.Source = _lastFrame;
-            Model.ApplyObservation(_recognition.Observe(FrameAdapter.ToPixels(_lastFrame)));
+            if (_lastAutomaticMode != Model.AutomaticHeroCards) { _recognition.Reset(); _lastAutomaticMode = Model.AutomaticHeroCards; }
+            Model.ApplyObservation(_recognition.Observe(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards));
             CaptureStatus.Text = $"Preview active: {_target.Title}. Frames remain in memory.";
         }
         catch (Exception ex) { StopCapture(ex.Message); }
@@ -68,7 +78,7 @@ public partial class MainWindow : Window
     private void StopCapture(string message)
     {
         _timer.Stop(); _target = null; _frozen = false; CancelCalibration();
-        CaptureTargets.IsEnabled = true; CaptureButton.Content = "Start preview"; FreezeButton.Content = "Freeze frame";
+        CaptureTargets.IsEnabled = true; CaptureButton.Content = "Start PPPoker preview"; FreezeButton.Content = "Freeze frame";
         CaptureStatus.Text = message; _lastFrame = null; Preview.Source = null;
         ClearRecognition(message);
     }
@@ -93,7 +103,8 @@ public partial class MainWindow : Window
             if (image.PixelWidth > 8192 || image.PixelHeight > 8192) throw new InvalidOperationException("Screenshot is too large.");
             _lastFrame = image; Preview.Source = image; _frozen = true;
             PreviewTabs.SelectedItem = WindowPreviewTab;
-            CaptureStatus.Text = "Screenshot loaded. Calibrate both corners, then teach or inspect this static frame.";
+            CaptureStatus.Text = "Screenshot loaded. Automatic mode looks for the bottom hero cards.";
+            InspectStaticFrame();
         }
         catch (Exception ex) { StopCapture(ex.Message); }
     }
@@ -102,6 +113,7 @@ public partial class MainWindow : Window
     private void BeginCalibration(int slot)
     {
         if (_lastFrame is null) { CaptureStatus.Text = "Start capture or load a screenshot first."; return; }
+        Model.AutomaticHeroCards = false;
         CancelCalibration(); _selectionSlot = slot; PreviewTabs.SelectedItem = WindowPreviewTab;
         ClearRecognition($"Drag around card {slot}'s small rank and suit in the preview.");
     }
@@ -152,7 +164,7 @@ public partial class MainWindow : Window
         if (!_frozen || _lastFrame is null) { CaptureStatus.Text = "Freeze the capture before teaching, or load a screenshot."; return; }
         try
         {
-            _recognition.Teach(FrameAdapter.ToPixels(_lastFrame), TeachCards.Text);
+            _recognition.Teach(FrameAdapter.ToPixels(_lastFrame), TeachCards.Text, Model.AutomaticHeroCards);
             _profileStore.Save(_recognition.Profile); Model.Coverage = _recognition.Coverage;
             CaptureStatus.Text = "Visible rank/suit samples saved. Resume preview for live recognition.";
             InspectStaticFrame();
@@ -164,7 +176,7 @@ public partial class MainWindow : Window
         if (_lastFrame is null) return;
         // A static screenshot is one observation, not three temporal confirmations.
         _recognition.Reset();
-        HandObservation result = _recognition.Inspect(FrameAdapter.ToPixels(_lastFrame));
+        HandObservation result = _recognition.Inspect(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards);
         Model.ApplyStaticObservation(result with { Status = result.Status + " Resume live capture for temporal confirmation." });
     }
     private void ClearRecognition(string status)

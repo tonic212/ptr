@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.IO.Compression;
 using PokerCompanion.Core.Recognition;
 
 int assertions = 0;
@@ -64,4 +65,39 @@ session.SetRegion(2, profile.FirstCard!, frame.Width, frame.Height);
 Check(!session.Inspect(frame).Success && session.Inspect(frame).Status.Contains("overlap"), "overlapping corners rejected");
 session.SetRegion(1, new(0, 0, .1, .1), 100, 200);
 Check(profile.SecondCard is null, "new dimensions clear old calibration");
+using var automaticFixtures = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "automatic-frames.json")));
+var locator = new BottomHeroCardLocator();
+foreach (JsonElement item in automaticFixtures.RootElement.EnumerateArray())
+{
+    using var compressed = new MemoryStream(item.GetProperty("CompressedBgra").GetBytesFromBase64());
+    using var gzip = new GZipStream(compressed, CompressionMode.Decompress);
+    using var decoded = new MemoryStream(); gzip.CopyTo(decoded);
+    var automaticFrame = new PixelFrame(item.GetProperty("Width").GetInt32(), item.GetProperty("Height").GetInt32(), decoded.ToArray());
+    string expected = item.GetProperty("Cards").GetString()!;
+    var automaticSession = new HandRecognitionSession(new RecognitionProfile { Templates = profile.Templates.ToList() });
+    Check(locator.TryLocate(automaticFrame, out var regions, out _) && regions is not null, "automatic bottom card location: " + expected);
+    Check(automaticSession.Inspect(automaticFrame, true).Cards == expected, "automatic symbols: " + expected);
+    Check(!automaticSession.Observe(automaticFrame, true).Success, "automatic first frame withheld");
+    Check(!automaticSession.Observe(automaticFrame, true).Success, "automatic second frame withheld");
+    Check(automaticSession.Observe(automaticFrame, true).Cards == expected, "automatic temporal confirmation");
+    Check(automaticSession.Profile.FirstCard is null, "automatic mode preserves manual profile");
+    var hidden = new PixelFrame(automaticFrame.Width, automaticFrame.Height, new byte[automaticFrame.Bgra.Length]);
+    Check(!automaticSession.Observe(hidden, true).Success, "automatic no cards clears result");
+    Check(!automaticSession.Observe(automaticFrame, true).Success, "automatic reappearance needs confirmation");
+    byte[] doubled = new byte[automaticFrame.Bgra.Length * 4];
+    for (int y = 0; y < automaticFrame.Height * 2; y++)
+        for (int x = 0; x < automaticFrame.Width * 2; x++)
+            Array.Copy(automaticFrame.Bgra, ((y / 2) * automaticFrame.Width + x / 2) * 4, doubled, (y * automaticFrame.Width * 2 + x) * 4, 4);
+    var resized = new PixelFrame(automaticFrame.Width * 2, automaticFrame.Height * 2, doubled);
+    Check(automaticSession.Inspect(resized, true).Cards == expected, "automatic resized table: " + expected);
+    byte[] oneCard = automaticFrame.Bgra.ToArray();
+    CardRegion second = regions!.Second;
+    int eraseX = (int)Math.Floor(second.X * automaticFrame.Width) - 2;
+    for (int y = (int)(automaticFrame.Height * .70); y < automaticFrame.Height; y++)
+        for (int x = Math.Max(0, eraseX); x < automaticFrame.Width; x++)
+            Array.Clear(oneCard, (y * automaticFrame.Width + x) * 4, 4);
+    Check(!locator.TryLocate(new PixelFrame(automaticFrame.Width, automaticFrame.Height, oneCard), out _, out _), "single card rejected");
+}
+foreach (var template in profile.Templates)
+    Check(matcher.Match(template.Mask, template.Kind, profile.Templates).Label == template.Label, "seed separates labels: " + template.Label);
 Console.WriteLine($"PASS: {assertions} recognition assertions.");
