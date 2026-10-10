@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -18,6 +19,10 @@ public partial class MainWindow : Window
     private readonly ScreenCaptureService _capture = new();
     private readonly RecognitionProfileStore _profileStore = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly OllamaVisionCardReader _visionReader = new();
+    private readonly VisionSettingsStore _visionStore = new();
+    private readonly VisionRecognitionController _vision;
+    private readonly CancellationTokenSource _lifetime = new();
     private HandRecognitionSession _recognition = null!;
     private CaptureTarget? _target;
     private OverlayWindow? _overlay;
@@ -32,17 +37,25 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _vision = new(_visionReader);
+        _vision.ObservationReady += (observation, staticPreview) =>
+        {
+            if (VisionEnabled.IsChecked != true) return;
+            if (staticPreview) Model.ApplyStaticObservation(observation); else Model.ApplyObservation(observation);
+        };
         try
         {
             DataContext = new MainViewModel();
             _recognition = new(_profileStore.Load());
             Model.Coverage = _recognition.Coverage;
+            VisionSettings settings = _visionStore.Load();
+            VisionEnabled.IsChecked = settings.Enabled; VisionModel.Text = settings.Model;
             if (_profileStore.LoadWarning is not null) CaptureStatus.Text = _profileStore.LoadWarning;
         }
         catch (Exception ex) { MessageBox.Show(ex.Message, "Startup failed"); Close(); return; }
         _timer.Tick += CaptureFrame;
         Loaded += (_, _) => LoadWindows();
-        Closed += (_, _) => { _timer.Stop(); _overlay?.Close(); _lastFrame = null; _rawFrame = null; Preview.Source = null; };
+        Closed += (_, _) => { _lifetime.Cancel(); _vision.Dispose(); _visionReader.Dispose(); _lifetime.Dispose(); _timer.Stop(); _overlay?.Close(); _lastFrame = null; _rawFrame = null; Preview.Source = null; };
     }
     private void LoadWindows()
     {
@@ -59,7 +72,7 @@ public partial class MainWindow : Window
         if (ScreenCaptureService.IsPokerTitle(target.Title)) _capture.Focus(target);
         _target = target; _frozen = false; FreezeButton.Content = "Freeze frame";
         CaptureTargets.IsEnabled = false; CaptureButton.Content = "Stop preview";
-        _lastAutomaticMode = Model.AutomaticHeroCards; _recognition.Reset(); _timer.Start(); PreviewTabs.SelectedItem = WindowPreviewTab;
+        _lastAutomaticMode = Model.AutomaticHeroCards; _vision.Reset(); _recognition.Reset(); _timer.Start(); PreviewTabs.SelectedItem = WindowPreviewTab;
         CaptureFrame(this, EventArgs.Empty);
     }
     private void CaptureFrame(object? sender, EventArgs e)
@@ -71,7 +84,8 @@ public partial class MainWindow : Window
             _rawFrame = _capture.Capture(_target);
             _lastFrame = PrepareTableFrame(_rawFrame); Preview.Source = _lastFrame;
             if (_lastAutomaticMode != Model.AutomaticHeroCards) { _recognition.Reset(); _lastAutomaticMode = Model.AutomaticHeroCards; }
-            Model.ApplyObservation(_recognition.Observe(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards));
+            if (VisionEnabled.IsChecked == true) _vision.Submit(_lastFrame, false, VisionModel.Text.Trim());
+            else Model.ApplyObservation(_recognition.Observe(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards));
             CaptureStatus.Text = $"Preview active: {_target.Title} ({_lastFrame.PixelWidth}×{_lastFrame.PixelHeight}). Frames remain in memory.";
         }
         catch (Exception ex) { StopCapture(ex.Message); }
@@ -215,12 +229,38 @@ public partial class MainWindow : Window
         if (_lastFrame is null) return;
         // A static screenshot is one observation, not three temporal confirmations.
         _recognition.Reset();
+        if (VisionEnabled.IsChecked == true)
+        {
+            _vision.Reset(); _vision.Submit(_lastFrame, true, VisionModel.Text.Trim()); return;
+        }
         HandObservation result = _recognition.Inspect(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards);
         Model.ApplyStaticObservation(result with { Status = result.Status + " Resume live capture for temporal confirmation." });
     }
     private void ClearRecognition(string status)
     {
-        _recognition.Reset(); Model.ApplyObservation(new(false, "", "", status));
+        _vision.Reset(); _recognition.Reset(); Model.ApplyObservation(new(false, "", "", status));
+    }
+    private void VisionSettingsChanged(object sender, RoutedEventArgs e)
+    {
+        if (_recognition is null) return;
+        ClearRecognition("Recognition mode or model changed. Checking current cards.");
+        try { _visionStore.Save(new(VisionEnabled.IsChecked == true, VisionModel.Text.Trim())); }
+        catch (Exception ex) { CaptureStatus.Text = "Could not save vision settings: " + ex.Message; }
+        if (_frozen) InspectStaticFrame();
+    }
+    private async void CheckOllama(object sender, RoutedEventArgs e)
+    {
+        var button = (System.Windows.Controls.Button)sender; button.IsEnabled = false;
+        try { CaptureStatus.Text = await _visionReader.CheckAsync(VisionModel.Text.Trim(), _lifetime.Token); }
+        catch (OperationCanceledException) { if (!_lifetime.IsCancellationRequested) CaptureStatus.Text = "Ollama check timed out."; }
+        catch (Exception ex) { CaptureStatus.Text = ex.Message; }
+        finally { if (!_lifetime.IsCancellationRequested) button.IsEnabled = true; }
+    }
+    private void ReadFrozenImage(object sender, RoutedEventArgs e)
+    {
+        if (!_frozen || _lastFrame is null) { CaptureStatus.Text = "Freeze preview or load a screenshot first."; return; }
+        if (VisionEnabled.IsChecked != true) { CaptureStatus.Text = "Enable local vision recognition first."; return; }
+        InspectStaticFrame();
     }
     private void ShowOverlay(object sender, RoutedEventArgs e)
     {

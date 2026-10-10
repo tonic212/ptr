@@ -121,4 +121,64 @@ Check(!new TableAreaSelection(new(0, 0, 1, 1), 1920, 1080).TryGetViewport(1920, 
 Check(!new TableAreaSelection(new(.9, 0, .2, .5), 1920, 1080).TryGetViewport(1920, 1080, out _, out _), "outside table selection rejected");
 string savedProfile = JsonSerializer.Serialize(new RecognitionProfile { TableArea = selectedArea });
 Check(JsonSerializer.Deserialize<RecognitionProfile>(savedProfile)!.TableArea == selectedArea, "table selection persists independently of glyph calibration");
+Check(VisionCardResponseParser.Parse("{\"visible\":true,\"cards\":[\"7h\",\"Ac\"]}").HandClass == "A7o", "vision canonical cards");
+Check(VisionCardResponseParser.Parse("{\"visible\":true,\"cards\":[\"10D\",\"jc\"]}").Cards == "Td Jc", "vision ten and case normalization");
+foreach (string invalid in new[] {
+    "not json", "{}", "null", "{\"visible\":true,\"cards\":[\"Ac\",\"Ac\"]}",
+    "{\"visible\":true,\"cards\":[\"1c\",\"Kh\"]}", "{\"visible\":true,\"cards\":[\"Ac\"]}",
+    "{\"visible\":true,\"cards\":[\"Ac\",\"Kd\",\"Qs\"]}", "{\"visible\":\"true\",\"cards\":[\"Ac\",\"Kh\"]}",
+    "{\"visible\":true,\"cards\":[null,\"Kh\"]}", "{\"visible\":false,\"cards\":[]}" })
+    Check(!VisionCardResponseParser.Parse(invalid).Success, "vision rejects invalid or missing cards: " + invalid);
+var confirmation = new VisionHandConfirmation();
+var visionReading = VisionCardResponseParser.Parse("{\"visible\":true,\"cards\":[\"7h\",\"Ac\"]}");
+Check(!confirmation.Observe(visionReading).Success, "vision first capture withheld");
+Check(confirmation.Observe(visionReading).Success, "vision second capture accepted");
+Check(!confirmation.Observe(new(false, "", "", "hidden")).Success, "vision unknown clears confirmation");
+Check(!confirmation.Observe(visionReading).Success, "vision reappearance needs new confirmation");
+confirmation.Reset();
+Check(!confirmation.Observe(visionReading).Success, "vision reset invalidates confirmation");
+Check(VisionFrameGuard.Matches(frame, frame), "vision unchanged crop matches");
+Check(!VisionFrameGuard.Matches(frame, blank), "vision disappeared cards invalidate pending reading");
+Check(!VisionFrameGuard.Matches(frame, enlarged), "vision resized crop invalidates pending reading");
+var noise = frame.Bgra.ToArray();
+for (int i = 0; i < noise.Length; i += 4) noise[i] = (byte)Math.Clamp(noise[i] + 1, 0, 255);
+Check(VisionFrameGuard.Matches(frame, new(frame.Width, frame.Height, noise)), "vision tolerates tiny pixel noise");
+using var fake = new FakeOllamaHandler();
+using var reader = new PokerCompanion.App.Services.Recognition.OllamaVisionCardReader(fake);
+Check((await reader.CheckAsync("qwen3-vl:4b-instruct-q4_K_M", CancellationToken.None)).Contains("Connected"), "local vision availability check");
+Check((await reader.ReadAsync(new byte[] { 1, 2, 3 }, "qwen3-vl:4b-instruct-q4_K_M", CancellationToken.None)).Cards == "7h Ac", "Ollama transport response parsed");
+using (var sent = JsonDocument.Parse(fake.LastBody!))
+{
+    Check(fake.LastUri == "http://127.0.0.1:11434/api/chat", "vision endpoint stays local");
+    Check(!sent.RootElement.GetProperty("stream").GetBoolean(), "vision nonstreaming JSON");
+    Check(sent.RootElement.GetProperty("messages")[0].GetProperty("images")[0].GetString() == "AQID", "vision sends encoded crop");
+    Check(sent.RootElement.GetProperty("format").GetProperty("additionalProperties").ValueKind == JsonValueKind.False, "vision constrained response schema");
+    Check(sent.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32() == 96, "vision token budget bounded");
+}
+Reject(() => reader.ReadAsync(new byte[] { 1 }, "qwen3-vl:cloud", CancellationToken.None).GetAwaiter().GetResult(), "cloud model names rejected");
+fake.Body = "{\"done\":false,\"message\":{\"content\":\"{}\"}}";
+Check(!(await reader.ReadAsync(new byte[] { 1 }, "local", CancellationToken.None)).Success, "incomplete Ollama response rejected");
+fake.Status = System.Net.HttpStatusCode.NotFound;
+try { await reader.ReadAsync(new byte[] { 1 }, "missing", CancellationToken.None); throw new Exception("FAILED: missing model"); }
+catch (InvalidOperationException ex) { Check(ex.Message.Contains("not installed"), "missing model produces install instruction"); }
+using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+try { await reader.ReadAsync(new byte[] { 1 }, "local", cancelled.Token); throw new Exception("FAILED: cancellation"); }
+catch (OperationCanceledException) { assertions++; }
 Console.WriteLine($"PASS: {assertions} recognition assertions.");
+
+
+sealed class FakeOllamaHandler : HttpMessageHandler
+{
+    public string? LastBody { get; private set; }
+    public string? LastUri { get; private set; }
+    public string Body { get; set; } = "{\"done\":true,\"message\":{\"content\":\"{\\\"visible\\\":true,\\\"cards\\\":[\\\"7h\\\",\\\"Ac\\\"]}\"}}";
+    public System.Net.HttpStatusCode Status { get; set; } = System.Net.HttpStatusCode.OK;
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        LastUri = request.RequestUri!.AbsoluteUri;
+        LastBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+        string body = request.RequestUri.AbsolutePath == "/api/show" ? "{\"capabilities\":[\"completion\",\"vision\"]}" : Body;
+        return new(Status) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
+    }
+}

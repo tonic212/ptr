@@ -21,6 +21,11 @@
         <TextBlock Text="Capture and recognition" FontSize="18" FontWeight="Bold"/>
         <TextBlock Text="Keep PPPoker visible and unobstructed. Automatic mode finds the two face-up cards at the bottom hero seat." TextWrapping="Wrap" Margin="0,8,0,8"/>
         <CheckBox Content="Find bottom hero cards automatically" IsChecked="{Binding AutomaticHeroCards}" Margin="0,8,0,8"/>
+        <CheckBox x:Name="VisionEnabled" Content="Use local vision model (Ollama)" Click="VisionSettingsChanged" Margin="0,4,0,4"/>
+        <TextBlock Text="Local vision model"/>
+        <TextBox x:Name="VisionModel" Text="qwen3-vl:4b-instruct-q4_K_M" LostFocus="VisionSettingsChanged"/>
+        <WrapPanel><Button Content="Check Ollama" Click="CheckOllama"/><Button Content="Read frozen image" Click="ReadFrozenImage"/></WrapPanel>
+        <TextBlock Text="Install Ollama and run: ollama pull qwen3-vl:4b-instruct-q4_K_M. Vision reads cropped hero cards locally; two matching captures confirm a live hand." TextWrapping="Wrap" Margin="0,0,0,8"/>
         <ComboBox x:Name="CaptureTargets" DisplayMemberPath="Title"/>
         <WrapPanel><Button Content="Refresh windows" Click="RefreshWindows"/><Button x:Name="CaptureButton" Content="Start PPPoker preview" Click="ToggleCapture"/></WrapPanel>
         <WrapPanel><Button Content="Select table area" Click="SelectTableArea"/><Button Content="Reset table area" Click="ResetTableArea"/></WrapPanel>

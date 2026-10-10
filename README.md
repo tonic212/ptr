@@ -2,6 +2,29 @@
 
 C# / WPF, .NET 8. Open PokerCompanion.sln in Visual Studio with the .NET desktop development workload and .NET 8 SDK. Set PokerCompanion.App as startup project. Build > Build Solution; press F5.
 
+## Local vision recognition (Ollama)
+
+Default model: `qwen3-vl:4b-instruct-q4_K_M` (Qwen3-VL 4B Instruct, Q4_K_M). The published model download is about 3.3 GB; runtime VRAM includes image/context buffers. A 10 GB GPU is a reasonable starting point, but real speed and accuracy must be measured on the user's PC. The app uses a 4,096-token context and at most 96 generated tokens per card reading. It does not benchmark tokens/second or claim a latency target.
+
+1. Install the current Windows Ollama application from https://ollama.com/download/windows and leave it running.
+2. In PowerShell, run `ollama pull qwen3-vl:4b-instruct-q4_K_M`.
+3. Pull this branch, open `PokerCompanion.sln`, set `PokerCompanion.App` as startup project, then Build > Rebuild Solution and F5.
+4. Leave **Use local vision model (Ollama)** checked. Click **Check Ollama** to verify the installed model advertises vision support.
+5. Start PPPoker preview. If it captures the desktop, use **Select table area** to crop the entire portrait table.
+6. The app reads a small bottom hero-card crop, upscaled for readability, through `http://127.0.0.1:11434/api/chat`. No cloud model or external inference endpoint is configured. Redirects/proxies are disabled for this client.
+7. For an existing screenshot, click **Load screenshot**, select the table area if needed, then **Read frozen image** to retry. Static readings display cards but do not populate the live chart input.
+8. Two matching model readings from separate live captures confirm a hand. If the crop changes, requests and confirmation are invalidated; absent/invalid/duplicate cards clear the detected hand. The UI continues capturing while one asynchronous inference request runs. A 2-second cooldown limits repeated inference; initial model loading may take longer, with a 90-second timeout.
+9. Model name and enabled state are saved in `%LOCALAPPDATA%\PokerCompanion\vision-settings.json`. For a smaller comparison model, pull `qwen3-vl:2b-instruct-q4_K_M` and enter that exact name; benchmark both on the same frozen screenshots before choosing.
+10. Uncheck local vision to use the existing template recognizer and its calibration/teaching controls. Those controls teach templates, not the LLM.
+
+The vision path does not require manually taught rank templates. It remains capable of visual mistakes: valid JSON and matching responses are not proof that a card is correct. The regression suite verifies parsing, transport, invalid-card rejection, confirmation and crop-change guards with mocked Ollama responses. It does not test inference quality or GPU performance. Windows capture and actual model readings still need verification on the target PC.
+
+Architecture: `IVisionCardReader`, response parsing and confirmation live in Core; `OllamaVisionCardReader`, `HeroVisionImage` and `VisionRecognitionController` adapt local HTTP, WPF image capture and asynchronous UI delivery. `MainWindow` connects the services to capture and controls. There is no additional NuGet dependency.
+
+Future solver integration should consume validated game state (hero/board cards, positions, stacks, pot and action history) and a separate solver interface. Solver action frequencies/EVs remain authoritative; model prose must not invent solver outputs. This change implements hero-card reading only, not board/bet reading, solver calls or LLM strategy generation.
+
+References: https://ollama.com/library/qwen3-vl/tags ; https://docs.ollama.com/api/chat ; https://docs.ollama.com/capabilities/vision ; https://docs.ollama.com/capabilities/structured-outputs
+
 ## Implemented
 - All chart scenarios in the supplied PDF, converted into hand-class lookups.
 - Original chart images shown alongside the lookup for verification.
@@ -12,8 +35,8 @@ C# / WPF, .NET 8. Open PokerCompanion.sln in Visual Studio with the .NET desktop
 - Automatic bottom-seat card location with 13 rank and four suit seed templates.
 - PPPoker window selected automatically when available; Start PPPoker preview requests focus once.
 - Frozen-frame/screenshot calibration and user teaching; saved local profile.
-- Three matching live frames required before a recognized hand feeds chart lookup.
-- Capture frames remain in memory; no upload, video storage or account connection.
+- Two matching model captures (vision) or three matching frames (templates) before a recognized hand feeds chart lookup.
+- Capture frames remain in memory; cropped cards are sent only to local Ollama when vision is enabled. No video storage or account connection.
 
 ## Not implemented
 Seat/position recognition, board/street detection, betting-history tracking, equity calculation, solver integration and exact tournament ICM. Chart scenario, positions, street and stack must be set manually. Recognition only supplies your two-card hand class.
@@ -26,7 +49,7 @@ Seat/position recognition, board/street detection, betting-history tracking, equ
 5. Show floating result to place the manually selected result beside your table.
 6. Refresh windows, select PPPoker (Steam), and start preview. Keep the target visible, unobstructed and restored. Stop preview when finished.
 
-7. Leave **Find bottom hero cards automatically** checked (default). No calibration is needed for the supplied portrait table layout: the locator searches for two face-up card backgrounds at the bottom seat. It relocates them each frame and after resizing. The detector does not infer your seat in other layouts.
+7. With local vision disabled, leave **Find bottom hero cards automatically** checked (default). No calibration is needed for the supplied portrait table layout: the locator searches for two face-up card backgrounds at the bottom seat. It relocates them each frame and after resizing. The detector does not infer your seat in other layouts.
 8. If automatic location fails on another layout, select **Freeze frame**, then **Calibrate card 1** and drag tightly around its small rank and small suit. Repeat for card 2. This selects manual mode. Exclude borders, the large central suit artwork and adjacent cards.
 9. If symbols remain uncertain, enter the actual visible pair (for example `9c 6s`; use T for ten and c/d/h/s for suits) and select **Teach visible cards**. Resume preview. Three consistent frames are required to accept a hand.
 10. **Load screenshot** supports calibration and teaching without a live table. It shows single-frame matches as static previews, without accepting them as live observations.
