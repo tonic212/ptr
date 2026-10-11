@@ -1,10 +1,8 @@
 using System;
-using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
-using System.Windows.Media;
 using PokerCompanion.Core.Recognition;
 
 namespace PokerCompanion.App.Services.Recognition;
@@ -60,7 +58,6 @@ public sealed class VisionRecognitionController : IDisposable
     }
     private async Task ReadAsync(HeroVisionImage image, BitmapSource table, bool staticPreview, string model, long generation)
     {
-        DateTime capturedAt = DateTime.UtcNow;
         _busy = true;
         using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
         if (!_confirmed) Publish(new(false, "", "", "Reading hero cards with local vision. First model load can take longer."), staticPreview);
@@ -80,7 +77,11 @@ public sealed class VisionRecognitionController : IDisposable
             }
             else if (DetectPosition && _reader is IVisionPositionReader positions && (staticPreview || DateTime.UtcNow >= _nextPositionRead))
             {
-                var position = await positions.ReadPositionAsync(EncodeTable(table), model, cancellation.Token);
+                // Use the freshest capture after card inference, not the older frame
+                // from before it. Detail crops and full table come from this one capture.
+                BitmapSource positionTable = _latestTable ?? table;
+                DateTime capturedAt = DateTime.UtcNow;
+                var position = await positions.ReadPositionAsync(PositionVisionImages.Create(positionTable), model, cancellation.Token);
                 if (_disposed || generation != _generation || _latest is null || !VisionFrameGuard.Matches(image.Pixels, _latest.Pixels)) return;
                 if (!staticPreview && DateTime.UtcNow - capturedAt >= TimeSpan.FromSeconds(20))
                     position = PositionObservation.Unknown("Seat/button response is too old. Checking a fresh capture.");
@@ -114,14 +115,6 @@ public sealed class VisionRecognitionController : IDisposable
                 _ = ReadAsync(_latest, _latestTable, true, _model, _generation);
             }
         }
-    }
-    private static byte[] EncodeTable(BitmapSource table)
-    {
-        if (table.PixelWidth / (double)table.PixelHeight >= .85) throw new InvalidOperationException("Select the whole portrait PPPoker table for position detection.");
-        double scale = Math.Min(1, 1000.0 / table.PixelHeight);
-        BitmapSource image = scale < 1 ? new TransformedBitmap(table, new ScaleTransform(scale, scale)) : table;
-        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(image));
-        using var stream = new MemoryStream(); encoder.Save(stream); return stream.ToArray();
     }
     private void Publish(HandObservation observation, bool staticPreview) => ObservationReady?.Invoke(observation, staticPreview);
     public void Dispose() { _disposed = true; Reset(); }

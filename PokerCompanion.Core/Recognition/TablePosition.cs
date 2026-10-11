@@ -10,8 +10,10 @@ public sealed record PositionObservation(bool Success, string Position, int Play
 
 public interface IVisionPositionReader
 {
-    Task<PositionObservation> ReadPositionAsync(byte[] png, string model, CancellationToken cancellationToken);
+    Task<PositionObservation> ReadPositionAsync(PositionVisionInput images, string model, CancellationToken cancellationToken);
 }
+
+public sealed record PositionVisionInput(byte[] TablePng, IReadOnlyList<byte[]> DetailPngs);
 
 // The model locates seats/button only. Clockwise ordering and chart position are code.
 public static class TablePositionParser
@@ -24,7 +26,15 @@ public static class TablePositionParser
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
             if (root.GetProperty("clear").ValueKind != JsonValueKind.True)
-                return PositionObservation.Unknown("Seat layout or dealer button is unclear.");
+            {
+                string? reason = root.TryGetProperty("reason", out var detail) && detail.ValueKind == JsonValueKind.String ? detail.GetString() : null;
+                return PositionObservation.Unknown(reason switch
+                {
+                    "button_not_found" => "Cannot identify the small D badge beside a player. Checking enlarged seat views.",
+                    "seats_unclear" => "Cannot identify all occupied player seats. Keep the whole table visible.",
+                    _ => "Seat layout or dealer button is unclear. Checking enlarged seat views."
+                });
+            }
             var seats = root.GetProperty("seats").EnumerateArray()
                 .Select(s => new SeatPoint(s.GetProperty("x").GetDouble(), s.GetProperty("y").GetDouble())).ToArray();
             return Calculate(seats, root.GetProperty("dealer").GetInt32());

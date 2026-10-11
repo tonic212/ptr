@@ -72,18 +72,29 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IVisionPositionR
         return content is null ? new(false, "", "", "Ollama returned an incomplete reading.") : VisionCardResponseParser.Parse(content);
     }
 
-    public async Task<PositionObservation> ReadPositionAsync(byte[] png, string model, CancellationToken cancellationToken)
+    public Task<PositionObservation> ReadPositionAsync(byte[] png, string model, CancellationToken cancellationToken)
+        => ReadPositionAsync(new PositionVisionInput(png, Array.Empty<byte[]>()), model, cancellationToken);
+
+    public async Task<PositionObservation> ReadPositionAsync(PositionVisionInput images, string model, CancellationToken cancellationToken)
     {
         ValidateModel(model);
         if (_host is not null) await _host.EnsureReadyAsync(model, cancellationToken);
-        if (png.Length == 0 || png.Length > 4 * 1024 * 1024) throw new ArgumentException("Invalid table image size.");
-        const string prompt = "Locate poker PLAYER seats and the DEALER BUTTON in this portrait PPPoker table. "
-            + "Return seats as avatar/name-panel centre coordinates normalized x,y from 0 to 1 relative to the entire image. "
-            + "Include ALL players dealt into this hand, even if they have folded. Exclude empty seats, sit-out seats, central decorative dealer avatar, board cards and controls. "
-            + "The hero is the player at bottom centre. Locate the small circular D dealer-button badge; do not confuse it with a player avatar or the decorative dealer. "
-            + "dealer is the ZERO-BASED index in your seats array of the player holding that D button. Do not derive it from betting or visible cards. "
-            + "clear=true only if all participating seats and the button association are unambiguous; otherwise clear=false, seats=[], dealer=-1. "
-            + "Do not guess whether a sitting-out player was dealt in. Do not output poker positions or actions. Return only JSON.";
+        if (images.DetailPngs.Count is not (0 or 3)) throw new ArgumentException("Expected left, right and bottom seat detail images.");
+        byte[][] pngs = new[] { images.TablePng }.Concat(images.DetailPngs).ToArray();
+        if (pngs.Any(png => png.Length == 0 || png.Length > 4 * 1024 * 1024)) throw new ArgumentException("Invalid table image size.");
+        const string prompt = "Locate occupied poker PLAYER seats and the DEALER BUTTON on this PPPoker table. "
+            + "Image 1 is the FULL TABLE. If four images are supplied, images 2, 3, 4 are enlarged LEFT, RIGHT, BOTTOM seat areas from the SAME capture. "
+            + "Use those detail images to read tiny badges, but return ALL seat x,y coordinates normalized from 0 to 1 in IMAGE 1, never in a detail crop. "
+            + "A player seat has an avatar with a player-name/stack panel. Include folded players: Fold text, grey avatars, or missing hole cards do NOT mean an empty seat. "
+            + "Exclude seats explicitly labelled Empty and the decorative female dealer at the TOP CENTRE, which has no player-name/stack panel. "
+            + "A single occupied seat may show a pair of card backs, bets, action labels or flags; these are not additional players. "
+            + "The hero is the player at bottom centre. Find the small WHITE outlined badge printed D BESIDE a player avatar, often on its inner table side. "
+            + "The badge may be HEXAGONAL or circular, with a dark/green D. Inspect the enlarged side images. It is not the decorative woman, a chip, diamond suit, Bet/Raise label or Empty marker. "
+            + "dealer is the ZERO-BASED index in your seats array of the player beside that D badge. Do not derive it from betting or cards. "
+            + "clear=true when occupied seats and D ownership are visually unambiguous, including folded players. "
+            + "If explicit sit-out status makes participation uncertain, or a seat is obstructed, use clear=false. "
+            + "For clear=false use seats=[], dealer=-1 and reason=button_not_found or seats_unclear; for clear=true use reason=ok. "
+            + "Do not guess a missing D. Do not output poker positions or actions. Return only JSON.";
         var schema = new
         {
             type = "object", properties = new
@@ -92,14 +103,15 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IVisionPositionR
                 seats = new { type = "array", maxItems = 9, items = new {
                     type = "object", properties = new { x = new { type = "number", minimum = 0, maximum = 1 }, y = new { type = "number", minimum = 0, maximum = 1 } },
                     required = new[] { "x", "y" }, additionalProperties = false } },
-                dealer = new { type = "integer", minimum = -1, maximum = 8 }
-            }, required = new[] { "clear", "seats", "dealer" }, additionalProperties = false
+                dealer = new { type = "integer", minimum = -1, maximum = 8 },
+                reason = new { type = "string", @enum = new[] { "ok", "button_not_found", "seats_unclear" } }
+            }, required = new[] { "clear", "seats", "dealer", "reason" }, additionalProperties = false
         };
         var payload = new
         {
             model, stream = false, format = schema, keep_alive = "5m",
             options = new { temperature = 0, num_predict = 384, num_ctx = 4096 },
-            messages = new[] { new { role = "user", content = prompt, images = new[] { Convert.ToBase64String(png) } } }
+            messages = new[] { new { role = "user", content = prompt, images = pngs.Select(Convert.ToBase64String).ToArray() } }
         };
         string? content = await SendReadingAsync(payload, cancellationToken);
         return content is null ? PositionObservation.Unknown("Incomplete seat/button reading.") : TablePositionParser.Parse(content);

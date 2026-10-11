@@ -285,6 +285,40 @@ foreach (var chart in vm.Charts)
     foreach (string opponent in matchup.Length == 2 ? matchup[1].Split('/') : new[] { "" })
         Check(PokerCompanion.Core.PositionChartSelector.Select(vm.Charts, matchup[0], parts[0], opponent)?.Id == chart.Id, "all source scenarios resolve: " + chart.Name + " " + opponent);
 }
+// The supplied four-player layout: top-right D, lower-left/lower-right,
+// bottom hero. Empty top-left and decorative top-centre dealer are excluded.
+SeatPoint[] observedFourSeats = [new(.5,.83), new(.10,.59), new(.89,.59), new(.89,.30)];
+Check(TablePositionParser.Calculate(observedFourSeats, 3).Position == "SB", "screenshot four-player layout maps hero to SB");
+Check(TablePositionParser.Parse("{\"clear\":false,\"reason\":\"button_not_found\",\"seats\":[],\"dealer\":-1}").Status.Contains("D badge"), "missing badge has actionable diagnostic");
+Check(TablePositionParser.Parse("{\"clear\":false,\"reason\":\"seats_unclear\",\"seats\":[],\"dealer\":-1}").Status.Contains("occupied player seats"), "unclear seats diagnostic distinguished");
+// Three coloured pixels stand in for small badges in a 434x770 portrait capture.
+int sw = 434, sh = 770;
+byte[] detailPixels = new byte[sw * sh * 4];
+(int x, int y, byte blue)[] markers = [(42,320,(byte)80),(335,247,(byte)160),(215,640,(byte)240)];
+foreach (var m in markers) detailPixels[(m.y * sw + m.x) * 4] = m.blue;
+var seatDetails = PositionVisionPreparation.CreateDetails(new(sw, sh, detailPixels));
+Check(seatDetails.Count == 3, "left right bottom detail order");
+for (int i = 0; i < seatDetails.Count; i++)
+{
+    var d = seatDetails[i];
+    Check(d.Width <= 640 && d.Height <= 1000, "seat detail image bounded");
+    Check(Enumerable.Range(0, d.Width * d.Height).Count(k => d.Bgra[k * 4] == markers[i].blue) >= 4, "small badge detail enlarged and preserved");
+    foreach (var other in markers.Where(m => m.blue != markers[i].blue))
+        Check(!Enumerable.Range(0, d.Width * d.Height).Any(k => d.Bgra[k * 4] == other.blue), "detail crops exclude unrelated seat areas");
+}
+try { PositionVisionPreparation.CreateDetails(new(800,600,new byte[800*600*4])); throw new Exception("FAILED: landscape position details"); }
+catch (InvalidOperationException) { assertions++; }
+var positionInput = new PositionVisionInput([1,2,3], new byte[][] { [4], [5], [6] });
+Check((await positionReader.ReadPositionAsync(positionInput, "local", CancellationToken.None)).Position == "SB", "multi-image position transport");
+using (var body = JsonDocument.Parse(positionHandler.LastBody!))
+{
+    var images = body.RootElement.GetProperty("messages")[0].GetProperty("images");
+    Check(images.GetArrayLength() == 4, "position sends full table plus three details");
+    Check(images[0].GetString() == "AQID" && images[1].GetString() == "BA==" && images[2].GetString() == "BQ==" && images[3].GetString() == "Bg==", "detail transport order and content preserved");
+    Check(body.RootElement.GetProperty("format").GetProperty("properties").GetProperty("reason").GetProperty("enum").GetArrayLength() == 3, "failure reason constrained");
+}
+Reject(() => positionReader.ReadPositionAsync(new PositionVisionInput([1], new byte[][] { [2] }), "local", CancellationToken.None).GetAwaiter().GetResult(), "partial detail set rejected");
+Reject(() => positionReader.ReadPositionAsync(new PositionVisionInput([1], new byte[][] { [], [2], [3] }), "local", CancellationToken.None).GetAwaiter().GetResult(), "empty detail image rejected");
 Console.WriteLine($"PASS: {assertions} recognition assertions.");
 
 
