@@ -337,12 +337,12 @@ Check(!TablePositionParser.ParseOpponents(OpponentReading([new(.1,.3)], -1)).Suc
 Check(!TablePositionParser.ParseOpponents(OpponentReading([new(.1,.3),new(.1,.3)], 0)).Success, "opponent duplicate rejected with anchored hero");
 var dealerGlyphs = JsonSerializer.Deserialize<DealerButtonGlyph[]>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "dealer-button-seeds.json")))!;
 var dealerDetector = new DealerButtonDetector(dealerGlyphs);
-PixelFrame BadgeFrame(int x, int y, bool duplicate = false)
+PixelFrame BadgeFrame(int x, int y, bool duplicate = false, int glyphIndex = 0)
 {
     int width = 400, height = 740;
     byte[] bytes = new byte[width * height * 4];
     for (int i = 0; i < bytes.Length; i += 4) { bytes[i] = 50; bytes[i+1] = 110; bytes[i+2] = 25; bytes[i+3] = 255; }
-    var glyph = dealerGlyphs[0];
+    var glyph = dealerGlyphs[glyphIndex];
     void Place(int px, int py) {
         for (int gy = 0; gy < glyph.Height; gy++)
             for (int gx = 0; gx < glyph.Width; gx++)
@@ -354,9 +354,17 @@ PixelFrame BadgeFrame(int x, int y, bool duplicate = false)
 var rightUpperD = BadgeFrame(330,210);
 Check(dealerDetector.TryFind(rightUpperD, sixSeats, out var badgeMatch) && badgeMatch!.SeatIndex == 4 && badgeMatch.Score > .99, "actual anonymized D badge matches correct seat");
 Check(!dealerDetector.TryFind(BadgeFrame(330,210,true), sixSeats, out _), "two D badges reject ambiguous frame");
+var smallLowerLeftD = BadgeFrame(86,462,glyphIndex:2);
+Check(dealerDetector.TryFind(smallLowerLeftD, sixSeats, out var smallBadgeMatch) && smallBadgeMatch!.SeatIndex == 1 && smallBadgeMatch.Score > .99,
+    "small badge from user screenshot matches lower-left seat without lowering threshold");
+Check(!dealerDetector.TryFind(BadgeFrame(180,360,glyphIndex:2),sixSeats,out _), "small central badge excluded");
 var fastTracker = new FastPositionTracker(dealerDetector);
 var fastLayout = heroBb with { LayoutComplete = true };
 DateTime fastNow = new(2026,10,11,8,0,0,DateTimeKind.Utc);
+var smallLayout = TablePositionParser.Calculate(sixSeats,1) with { LayoutComplete = true };
+Check(fastTracker.Initialize(smallLowerLeftD,smallLayout,fastNow), "small lower-left D initializes CPU tracker");
+Check(!fastTracker.Observe(smallLowerLeftD,fastNow).Success, "small badge requires second capture");
+Check(fastTracker.Observe(smallLowerLeftD,fastNow.AddMilliseconds(250)).Position == smallLayout.Position, "small badge confirms position with CPU");
 Check(fastTracker.Initialize(rightUpperD, fastLayout, fastNow), "one verified layout initializes fast tracker");
 Check(!fastTracker.Observe(rightUpperD, fastNow).Success, "fast tracker first capture withheld");
 Check(fastTracker.Observe(rightUpperD, fastNow.AddMilliseconds(250)).Position == "BB", "second CPU capture confirms without model");
