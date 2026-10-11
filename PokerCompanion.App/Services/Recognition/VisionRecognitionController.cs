@@ -60,6 +60,7 @@ public sealed class VisionRecognitionController : IDisposable
     }
     private async Task ReadAsync(HeroVisionImage image, BitmapSource table, bool staticPreview, string model, long generation)
     {
+        DateTime capturedAt = DateTime.UtcNow;
         _busy = true;
         using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
         if (!_confirmed) Publish(new(false, "", "", "Reading hero cards with local vision. First model load can take longer."), staticPreview);
@@ -81,8 +82,10 @@ public sealed class VisionRecognitionController : IDisposable
             {
                 var position = await positions.ReadPositionAsync(EncodeTable(table), model, cancellation.Token);
                 if (_disposed || generation != _generation || _latest is null || !VisionFrameGuard.Matches(image.Pixels, _latest.Pixels)) return;
+                if (!staticPreview && DateTime.UtcNow - capturedAt >= TimeSpan.FromSeconds(20))
+                    position = PositionObservation.Unknown("Seat/button response is too old. Checking a fresh capture.");
                 position = staticPreview ? position : _positionConfirmation.Observe(position);
-                _positionExpires = position.Success && !staticPreview ? DateTime.UtcNow.AddSeconds(20) : DateTime.MinValue;
+                _positionExpires = position.Success && !staticPreview ? capturedAt.AddSeconds(20) : DateTime.MinValue;
                 _nextPositionRead = DateTime.UtcNow.AddSeconds(4);
                 PositionReady?.Invoke(position, staticPreview);
             }
