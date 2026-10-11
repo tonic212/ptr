@@ -7,135 +7,140 @@ using PokerCompanion.Core.Recognition;
 
 namespace PokerCompanion.App.Services.Recognition;
 
-// Called on the WPF dispatcher. Network I/O is asynchronous; only one request
-// runs at a time, while every capture continues to update the current image.
+// Dispatcher-owned capture state. The CPU tracker runs even while GPU inference
+// is busy. GPU requests remain sequential; layout initialization runs once.
 public sealed class VisionRecognitionController : IDisposable
 {
     private readonly IVisionCardReader _reader;
+    private readonly FastPositionTracker? _fast;
     private readonly VisionHandConfirmation _confirmation = new();
-    private readonly PositionConfirmation _positionConfirmation = new();
+    private readonly PositionConfirmation _fallbackConfirmation = new();
+    private PositionObservation? _fallback;
+    private DateTime _fallbackExpires, _nextLayoutRead, _nextRead;
     private BitmapSource? _latestTable;
-    private DateTime _nextPositionRead, _positionExpires;
+    private HeroVisionImage? _latest, _anchor;
+    private CancellationTokenSource? _cancellation, _layoutCancellation;
+    private long _generation, _cardGeneration;
+    private bool _busy, _confirmed, _pendingStatic, _disposed;
+    private string _model = "";
     public bool DetectPosition { get; set; } = true;
     public event Action<PositionObservation, bool>? PositionReady;
-    private HeroVisionImage? _latest, _anchor;
-    private bool _pendingStatic;
-    private string _model = "";
-    private CancellationTokenSource? _cancellation;
-    private long _generation;
-    private bool _busy, _confirmed, _disposed;
-    private DateTime _nextRead;
     public event Action<HandObservation, bool>? ObservationReady;
 
-    public VisionRecognitionController(IVisionCardReader reader) => _reader = reader;
+    public VisionRecognitionController(IVisionCardReader reader, FastPositionTracker? fast = null) { _reader = reader; _fast = fast; }
+    private void ResetCards()
+    {
+        _cardGeneration++; _cancellation?.Cancel(); _confirmation.Reset();
+        _latest = null; _anchor = null; _confirmed = false; _nextRead = DateTime.MinValue;
+        _fallback = null; _fallbackConfirmation.Reset();
+    }
     public void Reset()
     {
-        _generation++; _cancellation?.Cancel(); _confirmation.Reset();
-        _latest = null; _anchor = null; _pendingStatic = false; _confirmed = false; _nextRead = DateTime.MinValue;
-        _latestTable = null; _positionConfirmation.Reset(); _nextPositionRead = DateTime.MinValue; _positionExpires = DateTime.MinValue;
-        PositionReady?.Invoke(PositionObservation.Unknown("Waiting for current seats and dealer button."), false);
+        _generation++; _layoutCancellation?.Cancel(); ResetCards(); _fast?.Reset();
+        _latestTable = null; _pendingStatic = false; _nextLayoutRead = DateTime.MinValue;
+        PositionReady?.Invoke(PositionObservation.Unknown("Identifying seats for fast D-badge tracking."), false);
     }
     public void Submit(BitmapSource table, bool staticPreview, string model)
     {
         if (_disposed) return;
-        HeroVisionImage image;
-        try { image = HeroVisionImage.Create(table); }
-        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
-        { Reset(); Publish(new(false, "", "", ex.Message), staticPreview); return; }
-        if (_anchor is not null && !VisionFrameGuard.Matches(_anchor.Pixels, image.Pixels))
+        _latestTable = table; _model = model;
+        if (DetectPosition && !staticPreview)
         {
-            Reset(); Publish(new(false, "", "", "Hero image changed. Checking the current cards."), staticPreview);
+            var fast = _fast?.Observe(FrameAdapter.ToPixels(table), DateTime.UtcNow)
+                ?? PositionObservation.Unknown("Fast badge templates unavailable. Using vision fallback.");
+            var result = _fast?.HasLayout != true && _fallback?.Success == true && DateTime.UtcNow < _fallbackExpires ? _fallback : fast;
+            PositionReady?.Invoke(result, false);
         }
-        _latest = image; _latestTable = table; _anchor ??= image; _model = model;
-        if (DetectPosition && _positionExpires != DateTime.MinValue && DateTime.UtcNow >= _positionExpires)
-        {
-            _positionExpires = DateTime.MinValue; _positionConfirmation.Reset();
-            PositionReady?.Invoke(PositionObservation.Unknown("Position expired. Checking the current button."), staticPreview);
-        }
-        if (_busy && staticPreview) _pendingStatic = true;
-        if (_busy || (!staticPreview && DateTime.UtcNow < _nextRead)) return;
-        _ = ReadAsync(image, table, staticPreview, model, _generation);
-    }
-    private async Task ReadAsync(HeroVisionImage image, BitmapSource table, bool staticPreview, string model, long generation)
-    {
-        _busy = true;
-        using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
-        if (!_confirmed) Publish(new(false, "", "", "Reading hero cards with local vision. First model load can take longer."), staticPreview);
         try
         {
-            HandObservation reading = await _reader.ReadAsync(image.Png, model, cancellation.Token);
-            if (_disposed || generation != _generation || _latest is null
-                || !VisionFrameGuard.Matches(image.Pixels, _latest.Pixels)) return;
-            reading = image.Evidence?.Validate(reading) ?? reading;
-            var result = staticPreview ? reading : _confirmation.Observe(reading);
-            _confirmed = !staticPreview && result.Success;
-            Publish(result, staticPreview);
-            if (!result.Success)
-            {
-                _positionConfirmation.Reset(); _positionExpires = DateTime.MinValue;
-                PositionReady?.Invoke(PositionObservation.Unknown("Waiting for confirmed hero cards before detecting position."), staticPreview);
-            }
-            else if (DetectPosition && _reader is IVisionPositionReader positions && (staticPreview || DateTime.UtcNow >= _nextPositionRead))
-            {
-                try
-                {
-                    // Use the freshest capture after card inference, not the older frame
-                    // from before it. Detail crops and full table come from this one capture.
-                    BitmapSource positionTable = _latestTable ?? table;
-                    DateTime capturedAt = DateTime.UtcNow;
-                    var position = await positions.ReadPositionAsync(PositionVisionImages.Create(positionTable), model, cancellation.Token);
-                    if (_disposed || generation != _generation || _latest is null || !VisionFrameGuard.Matches(image.Pixels, _latest.Pixels)) return;
-                    if (!staticPreview && DateTime.UtcNow - capturedAt >= TimeSpan.FromSeconds(20))
-                        position = PositionObservation.Unknown("Seat/button response is too old. Checking a fresh capture.");
-                    position = staticPreview ? position : _positionConfirmation.Observe(position);
-                    _positionExpires = position.Success && !staticPreview ? capturedAt.AddSeconds(20) : DateTime.MinValue;
-                    _nextPositionRead = DateTime.UtcNow.AddSeconds(4);
-                    PositionReady?.Invoke(position, staticPreview);
-                }
-                catch (OperationCanceledException)
-                {
-                    PositionFailed("Position request timed out. Checking again with a fresh capture.", staticPreview, generation);
-                }
-                catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or ArgumentException or System.Text.Json.JsonException or System.IO.IOException)
-                {
-                    PositionFailed("Position reading: " + ex.Message, staticPreview, generation);
-                }
-            }
+            var image = HeroVisionImage.Create(table);
+            if (_anchor is not null && !VisionFrameGuard.Matches(_anchor.Pixels, image.Pixels))
+            { ResetCards(); ObservationReady?.Invoke(new(false, "", "", "Hero image changed. Checking current cards."), staticPreview); }
+            _latest = image; _anchor ??= image;
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        { ResetCards(); ObservationReady?.Invoke(new(false, "", "", ex.Message), staticPreview); }
+        if (_busy && staticPreview) _pendingStatic = true;
+        if (_busy || (!staticPreview && DateTime.UtcNow < _nextRead)) return;
+        _ = ReadAsync(staticPreview, model, _generation);
+    }
+    private async Task ReadAsync(bool staticPreview, string model, long generation)
+    {
+        _busy = true;
+        try
         {
-            if (!_disposed && generation == _generation)
-            { Reset(); Publish(new(false, "", "", "Vision request timed out. Prepare local vision and try again."), staticPreview); }
-        }
-        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or ArgumentException or System.Text.Json.JsonException or System.IO.IOException)
-        {
-            if (!_disposed && generation == _generation)
+            if (DetectPosition && _reader is IVisionPositionReader positions && _latestTable is not null
+                && (staticPreview || (_fast?.HasLayout != true && DateTime.UtcNow >= _nextLayoutRead)))
+                await ReadLayoutAsync(positions, _latestTable, staticPreview, model, generation);
+            if (_disposed || generation != _generation || _latest is null) return;
+            HeroVisionImage image = _latest;
+            long cardGeneration = _cardGeneration;
+            using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
+            if (!_confirmed) ObservationReady?.Invoke(new(false, "", "", "Reading hero cards with local vision. Position tracking runs independently."), staticPreview);
+            try
             {
-                Reset();
-                string message = ex is HttpRequestException ? "Local vision could not connect. Click Prepare local vision to retry setup." : ex.Message;
-                Publish(new(false, "", "", message), staticPreview);
+                var reading = await _reader.ReadAsync(image.Png, model, cancellation.Token);
+                if (_disposed || generation != _generation || cardGeneration != _cardGeneration || _latest is null
+                    || !VisionFrameGuard.Matches(image.Pixels, _latest.Pixels)) return;
+                reading = image.Evidence?.Validate(reading) ?? reading;
+                var result = staticPreview ? reading : _confirmation.Observe(reading);
+                _confirmed = !staticPreview && result.Success;
+                ObservationReady?.Invoke(result, staticPreview);
+            }
+            catch (OperationCanceledException)
+            {
+                if (!_disposed && generation == _generation && cardGeneration == _cardGeneration)
+                { ResetCards(); ObservationReady?.Invoke(new(false, "", "", "Card request timed out. Position tracking continues."), staticPreview); }
+            }
+            catch (Exception ex) when (IsReadingError(ex))
+            {
+                if (!_disposed && generation == _generation && cardGeneration == _cardGeneration)
+                { ResetCards(); ObservationReady?.Invoke(new(false, "", "", ex.Message), staticPreview); }
             }
         }
         finally
         {
-            _busy = false; _cancellation = null;
-            _nextRead = DateTime.UtcNow.AddSeconds(2);
-            if (_pendingStatic && !_disposed && _latest is not null && _latestTable is not null)
-            {
-                _pendingStatic = false;
-                _ = ReadAsync(_latest, _latestTable, true, _model, _generation);
-            }
+            _busy = false; _cancellation = null; _nextRead = DateTime.UtcNow.AddSeconds(2);
+            if (_pendingStatic && !_disposed && _latestTable is not null)
+            { _pendingStatic = false; _ = ReadAsync(true, _model, _generation); }
         }
     }
-    // Seat inference is optional evidence. Its failure invalidates the range,
-    // but must not erase cards already independently confirmed by the card reader.
-    private void PositionFailed(string status, bool staticPreview, long generation)
+    private async Task ReadLayoutAsync(IVisionPositionReader reader, BitmapSource table, bool staticPreview, string model, long generation)
     {
-        if (_disposed || generation != _generation) return;
-        _positionConfirmation.Reset(); _positionExpires = DateTime.MinValue;
-        _nextPositionRead = DateTime.UtcNow.AddSeconds(4);
-        PositionReady?.Invoke(PositionObservation.Unknown(status), staticPreview);
+        using var cancellation = new CancellationTokenSource(); _layoutCancellation = cancellation;
+        DateTime capturedAt = DateTime.UtcNow;
+        try
+        {
+            var reading = await reader.ReadPositionAsync(PositionVisionImages.Create(table), model, cancellation.Token);
+            if (_disposed || generation != _generation || _latestTable is null) return;
+            if (staticPreview) { PositionReady?.Invoke(reading, true); return; }
+            if (DateTime.UtcNow - capturedAt >= TimeSpan.FromSeconds(20))
+                reading = PositionObservation.Unknown("Layout response is too old. Checking a fresh capture.");
+            if (reading.Success && _fast?.Initialize(FrameAdapter.ToPixels(table), reading, capturedAt) == true)
+            {
+                _fallback = null; _fallbackConfirmation.Reset();
+                PositionReady?.Invoke(_fast.Observe(FrameAdapter.ToPixels(_latestTable), DateTime.UtcNow), false);
+            }
+            else
+            {
+                var result = _fallbackConfirmation.Observe(reading);
+                _fallback = result.Success ? result with { Status = result.Status + " Slow vision fallback; D badge not matched for fast tracking." } : null;
+                _fallbackExpires = capturedAt.AddSeconds(20);
+                PositionReady?.Invoke(_fallback ?? result, false);
+            }
+        }
+        catch (OperationCanceledException)
+        { if (!_disposed && generation == _generation) PositionFailed("Layout request timed out."); }
+        catch (Exception ex) when (IsReadingError(ex))
+        { if (!_disposed && generation == _generation) PositionFailed("Position reading: " + ex.Message); }
+        finally { _layoutCancellation = null; _nextLayoutRead = DateTime.UtcNow.AddSeconds(4); }
     }
-    private void Publish(HandObservation observation, bool staticPreview) => ObservationReady?.Invoke(observation, staticPreview);
+    private void PositionFailed(string status)
+    {
+        _fallback = null; _fallbackConfirmation.Reset();
+        PositionReady?.Invoke(PositionObservation.Unknown(status), false);
+    }
+    private static bool IsReadingError(Exception ex) => ex is HttpRequestException or InvalidOperationException or ArgumentException
+        or System.Text.Json.JsonException or System.IO.IOException;
     public void Dispose() { _disposed = true; Reset(); }
 }

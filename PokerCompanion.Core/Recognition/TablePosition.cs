@@ -5,6 +5,10 @@ namespace PokerCompanion.Core.Recognition;
 public sealed record SeatPoint(double X, double Y);
 public sealed record PositionObservation(bool Success, string Position, int PlayerCount, string LayoutKey, string Status)
 {
+    public IReadOnlyList<SeatPoint> Seats { get; init; } = [];
+    public IReadOnlyList<SeatPoint> VacantSeats { get; init; } = [];
+    public int DealerSeatIndex { get; init; } = -1;
+    public bool LayoutComplete { get; init; }
     public static PositionObservation Unknown(string status) => new(false, "", 0, "", status);
 }
 
@@ -48,7 +52,18 @@ public static class TablePositionParser
             // Hero is the known bottom seat, independently established by card
             // recognition. A model cannot omit or relocate that anchor.
             SeatPoint[] anchored = [new(.5, .86), .. seats];
-            return Calculate(anchored, dealer + 1);
+            var result = Calculate(anchored, dealer + 1);
+            if (!result.Success) return result;
+            SeatPoint[] vacant = root.TryGetProperty("vacant", out var empty)
+                ? empty.EnumerateArray().Select(s => new SeatPoint(s.GetProperty("x").GetDouble(), s.GetProperty("y").GetDouble())).ToArray() : [];
+            var all = anchored.Concat(vacant).ToArray();
+            if (all.Length > 9 || vacant.Any(s => !double.IsFinite(s.X) || !double.IsFinite(s.Y) || s.X < 0 || s.X > 1 || s.Y < 0 || s.Y > 1))
+                return PositionObservation.Unknown("Invalid empty-seat layout.");
+            for (int i = 0; i < all.Length; i++)
+                for (int j = 0; j < i; j++)
+                    if (Math.Pow(all[i].X - all[j].X, 2) + Math.Pow(all[i].Y - all[j].Y, 2) < .0064)
+                        return PositionObservation.Unknown("Occupied and empty seat locations overlap.");
+            return result with { VacantSeats = vacant, LayoutComplete = root.TryGetProperty("layout_complete", out var complete) && complete.ValueKind == JsonValueKind.True };
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException)
         { return PositionObservation.Unknown("Invalid seat/button reading. Checking again."); }
@@ -85,7 +100,7 @@ public static class TablePositionParser
             var s = seats[order[(heroIndex + k) % seats.Count]];
             return s.X < .3 ? "L" : s.X > .7 ? "R" : s.Y < .48 ? "T" : "H";
         }));
-        return new(true, position, seats.Count, key, $"Hero: {position} • {seats.Count} players. Nine-seat chart label by distance from BTN.");
+        return new(true, position, seats.Count, key, $"Hero: {position} • {seats.Count} players. Nine-seat chart label by distance from BTN.") { Seats = seats.ToArray(), DealerSeatIndex = dealer };
     }
 }
 

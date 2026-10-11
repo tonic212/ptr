@@ -91,7 +91,7 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IVisionPositionR
             + "The bottom-centre player is HERO and is already known by the app. NEVER include hero in seats; return ONLY the other occupied player seats. Find the small WHITE outlined badge printed D BESIDE a player avatar, often on its inner table side. "
             + "The badge may be HEXAGONAL or circular, with a dark/green D. Inspect the enlarged side images. It is not the decorative woman, a chip, diamond suit, Bet/Raise label or Empty marker. "
             + "dealer is the ZERO-BASED index in your OPPONENT seats array of the player beside that D badge. If the D belongs to bottom HERO, return dealer=-1 with clear=true and reason=ok. Do not derive it from betting or cards. "
-            + "clear=true when occupied seats and D ownership are visually unambiguous, including folded players. "
+            + "clear=true when occupied seats and D ownership are visually unambiguous, including folded players. Return vacant as centres of every visible Empty seat badge; never include these in occupied seats. Return layout_complete=true only when every occupied AND Empty player slot is accounted for. "
             + "If explicit sit-out status makes participation uncertain, or a seat is obstructed, use clear=false. "
             + "For clear=false use seats=[], dealer=-1 and reason=button_not_found or seats_unclear; for clear=true use reason=ok. "
             + "Do not guess a missing D. Do not output poker positions or actions. Return only JSON.";
@@ -103,14 +103,18 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IVisionPositionR
                 seats = new { type = "array", maxItems = 8, items = new {
                     type = "object", properties = new { x = new { type = "number", minimum = 0, maximum = 1 }, y = new { type = "number", minimum = 0, maximum = 1 } },
                     required = new[] { "x", "y" }, additionalProperties = false } },
+                vacant = new { type = "array", maxItems = 6, items = new {
+                    type = "object", properties = new { x = new { type = "number", minimum = 0, maximum = 1 }, y = new { type = "number", minimum = 0, maximum = 1 } },
+                    required = new[] { "x", "y" }, additionalProperties = false } },
+                layout_complete = new { type = "boolean" },
                 dealer = new { type = "integer", minimum = -1, maximum = 7 },
                 reason = new { type = "string", @enum = new[] { "ok", "button_not_found", "seats_unclear" } }
-            }, required = new[] { "clear", "seats", "dealer", "reason" }, additionalProperties = false
+            }, required = new[] { "clear", "seats", "vacant", "layout_complete", "dealer", "reason" }, additionalProperties = false
         };
         var payload = new
         {
             model, stream = false, format = schema, keep_alive = "5m",
-            options = new { temperature = 0, num_predict = 384, num_ctx = 8192 },
+            options = new { temperature = 0, num_predict = 512, num_ctx = 8192 },
             messages = new[] { new { role = "user", content = prompt, images = pngs.Select(Convert.ToBase64String).ToArray() } }
         };
         string? content = await SendReadingAsync(payload, cancellationToken);

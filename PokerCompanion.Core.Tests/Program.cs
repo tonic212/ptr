@@ -248,8 +248,8 @@ Check((await positionReader.ReadPositionAsync([1,2,3], "local", CancellationToke
 using (var body = JsonDocument.Parse(positionHandler.LastBody!))
 {
     Check(body.RootElement.GetProperty("format").GetProperty("properties").GetProperty("seats").GetProperty("maxItems").GetInt32() == 8, "position output bounded");
-    Check(body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32() == 384, "position token budget bounded");
-    Check(body.RootElement.GetProperty("options").GetProperty("num_ctx").GetInt32() >= 4644 + 384, "context accommodates observed seat prompt plus output budget");
+    Check(body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32() == 512, "position token budget bounded");
+    Check(body.RootElement.GetProperty("options").GetProperty("num_ctx").GetInt32() >= 4644 + 512, "context accommodates observed seat prompt plus output budget");
 }
 var vm = new PokerCompanion.App.ViewModels.MainViewModel();
 Check(vm.SelectedChart is null, "automatic range starts without stale chart");
@@ -335,6 +335,70 @@ Check(!TablePositionParser.ParseOpponents(OpponentReading(sixSeats, 4)).Success,
 Check(!TablePositionParser.ParseOpponents(OpponentReading(sixSeats.Skip(1).ToArray(), 5)).Success, "opponent dealer out of bounds rejected");
 Check(!TablePositionParser.ParseOpponents(OpponentReading([new(.1,.3)], -1)).Success, "opponent-only heads up unsupported");
 Check(!TablePositionParser.ParseOpponents(OpponentReading([new(.1,.3),new(.1,.3)], 0)).Success, "opponent duplicate rejected with anchored hero");
+var dealerGlyphs = JsonSerializer.Deserialize<DealerButtonGlyph[]>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "dealer-button-seeds.json")))!;
+var dealerDetector = new DealerButtonDetector(dealerGlyphs);
+PixelFrame BadgeFrame(int x, int y, bool duplicate = false)
+{
+    int width = 400, height = 740;
+    byte[] bytes = new byte[width * height * 4];
+    for (int i = 0; i < bytes.Length; i += 4) { bytes[i] = 50; bytes[i+1] = 110; bytes[i+2] = 25; bytes[i+3] = 255; }
+    var glyph = dealerGlyphs[0];
+    void Place(int px, int py) {
+        for (int gy = 0; gy < glyph.Height; gy++)
+            for (int gx = 0; gx < glyph.Width; gx++)
+                Array.Copy(glyph.Bgra, (gy * glyph.Width + gx) * 4, bytes, ((py + gy) * width + px + gx) * 4, 4);
+    }
+    Place(x,y); if (duplicate) Place(40,440);
+    return new(width,height,bytes);
+}
+var rightUpperD = BadgeFrame(330,210);
+Check(dealerDetector.TryFind(rightUpperD, sixSeats, out var badgeMatch) && badgeMatch!.SeatIndex == 4 && badgeMatch.Score > .99, "actual anonymized D badge matches correct seat");
+Check(!dealerDetector.TryFind(BadgeFrame(330,210,true), sixSeats, out _), "two D badges reject ambiguous frame");
+var fastTracker = new FastPositionTracker(dealerDetector);
+var fastLayout = heroBb with { LayoutComplete = true };
+DateTime fastNow = new(2026,10,11,8,0,0,DateTimeKind.Utc);
+Check(fastTracker.Initialize(rightUpperD, fastLayout, fastNow), "one verified layout initializes fast tracker");
+Check(!fastTracker.Observe(rightUpperD, fastNow).Success, "fast tracker first capture withheld");
+Check(fastTracker.Observe(rightUpperD, fastNow.AddMilliseconds(250)).Position == "BB", "second CPU capture confirms without model");
+var rightLowerD = BadgeFrame(330,460);
+Check(!fastTracker.Observe(rightLowerD, fastNow.AddMilliseconds(500)).Success, "moving button immediately clears old position");
+Check(fastTracker.Observe(rightLowerD, fastNow.AddMilliseconds(750)).Position == "SB", "button move confirms on next capture");
+var hiddenBadge = BadgeFrame(180,360);
+Check(!fastTracker.Observe(hiddenBadge, fastNow.AddSeconds(1)).Success, "central white badge cannot stand in for dealer");
+Check(fastTracker.HasLayout, "hidden badge retains validated seat layout");
+Check(!fastTracker.Observe(rightLowerD, fastNow.AddSeconds(1.25)).Success, "hidden badge resets confirmation");
+Check(fastTracker.Observe(rightLowerD, fastNow.AddSeconds(1.5)).Position == "SB", "visible badge reconfirms without layout inference");
+byte[] doubledPosition = new byte[rightLowerD.Bgra.Length * 4];
+for (int y = 0; y < rightLowerD.Height * 2; y++)
+    for (int x = 0; x < rightLowerD.Width * 2; x++)
+        Array.Copy(rightLowerD.Bgra, ((y/2)*rightLowerD.Width+x/2)*4, doubledPosition, (y*rightLowerD.Width*2+x)*4, 4);
+Check(fastTracker.Observe(new(rightLowerD.Width*2,rightLowerD.Height*2,doubledPosition), fastNow.AddSeconds(2)).Position == "SB", "CPU tracking survives uniform resize");
+Check(!fastTracker.Observe(rightLowerD, fastNow.AddMinutes(2)).Success && !fastTracker.HasLayout, "layout periodically expires for revalidation");
+Check(!fastTracker.Initialize(rightUpperD, heroBb, fastNow), "incomplete seat roster cannot be cached");
+Check(!fastTracker.Initialize(rightUpperD, heroSb with { LayoutComplete = true }, fastNow), "model D owner must agree with visible template");
+SeatPoint[] threeSeats = [new(.5,.86),new(.10,.60),new(.90,.30)];
+var threeLayout = TablePositionParser.Calculate(threeSeats,2) with { LayoutComplete = true, VacantSeats = [new(.1,.3),new(.9,.6)] };
+Check(fastTracker.Initialize(rightUpperD, threeLayout, fastNow), "occupied and Empty slots cached together");
+var joinedPixels = (byte[])rightUpperD.Bgra.Clone();
+for (int y=210;y<235;y++) for(int x=25;x<55;x++) {
+    int i=(y*400+x)*4; joinedPixels[i]=220;joinedPixels[i+1]=20;joinedPixels[i+2]=210;
+}
+Check(!fastTracker.Observe(new(400,740,joinedPixels),fastNow.AddSeconds(1)).Success && !fastTracker.HasLayout, "new player in formerly Empty slot invalidates roster");
+Check(fastTracker.Initialize(rightUpperD,fastLayout,fastNow), "cache reinitializes after roster change");
+var leftPixels = (byte[])rightUpperD.Bgra.Clone();
+for(int y=485;y<510;y++) for(int x=25;x<55;x++) {
+    int i=(y*400+x)*4;leftPixels[i]=220;leftPixels[i+1]=20;leftPixels[i+2]=210;
+}
+Check(!fastTracker.Observe(new(400,740,leftPixels),fastNow.AddSeconds(1)).Success && !fastTracker.HasLayout, "occupied seat appearance change invalidates roster");
+string completeRoster = JsonSerializer.Serialize(new { clear=true, reason="ok", seats=threeSeats.Skip(1).Select(s=>new{x=s.X,y=s.Y}), dealer=1,
+    vacant=new[]{new{x=.1,y=.3},new{x=.9,y=.6}},layout_complete=true });
+var completeReading = TablePositionParser.ParseOpponents(completeRoster);
+Check(completeReading.Success && completeReading.LayoutComplete && completeReading.VacantSeats.Count==2 && completeReading.Seats.Count==3, "layout metadata retained for fast tracker");
+fastTracker.Initialize(rightUpperD, fastLayout, fastNow);
+var fastWatch = System.Diagnostics.Stopwatch.StartNew();
+for (int i=0;i<10;i++) fastTracker.Observe(rightUpperD, fastNow.AddMilliseconds(i*250));
+fastWatch.Stop();
+Console.WriteLine($"Fast position fixture: 10 CPU frames in {fastWatch.ElapsedMilliseconds} ms; no model requests.");
 Console.WriteLine($"PASS: {assertions} recognition assertions.");
 
 

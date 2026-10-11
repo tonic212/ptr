@@ -18,7 +18,7 @@ public partial class MainWindow : Window
 {
     private readonly ScreenCaptureService _capture = new();
     private readonly RecognitionProfileStore _profileStore = new();
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private readonly LocalOllamaHost _localHost = new();
     private readonly OllamaVisionCardReader _visionReader;
     private readonly VisionSettingsStore _visionStore = new();
@@ -39,7 +39,10 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _visionReader = new(_localHost);
-        _vision = new(_visionReader);
+        FastPositionTracker? fast = null;
+        try { fast = new(DealerButtonSeedStore.Load()); }
+        catch (Exception ex) { CaptureStatus.Text = "Fast position unavailable: " + ex.Message; }
+        _vision = new(_visionReader, fast);
         _vision.PositionReady += (observation, staticPreview) =>
         {
             if (DataContext is MainViewModel model && VisionEnabled.IsChecked == true) model.ApplyPosition(observation, staticPreview);

@@ -18,6 +18,7 @@ public partial class App : System.Windows.Application
                 var charts = new ChartRepository().Load();
                 string seeds = Path.Combine(BundledDataStore.Root, "Data", "recognition-seeds.json");
                 if (!File.Exists(seeds)) throw new InvalidDataException("Bundled recognition seeds missing.");
+                _ = PokerCompanion.App.Services.Recognition.DealerButtonSeedStore.Load();
                 var converter = new ChartImageConverter();
                 if (converter.Convert(null!, typeof(System.Windows.Media.ImageSource), null!, System.Globalization.CultureInfo.InvariantCulture) is not null)
                     throw new InvalidDataException("Empty chart did not produce an empty image.");
