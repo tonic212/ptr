@@ -288,7 +288,7 @@ foreach (var chart in vm.Charts)
 // The supplied four-player layout: top-right D, lower-left/lower-right,
 // bottom hero. Empty top-left and decorative top-centre dealer are excluded.
 SeatPoint[] observedFourSeats = [new(.5,.83), new(.10,.59), new(.89,.59), new(.89,.30)];
-Check(TablePositionParser.Calculate(observedFourSeats, 3).Position == "SB", "screenshot four-player layout maps hero to SB");
+Check(TablePositionParser.Calculate(observedFourSeats, 3).Position == "BB", "screenshot four-player layout maps hero to BB");
 Check(TablePositionParser.Parse("{\"clear\":false,\"reason\":\"button_not_found\",\"seats\":[],\"dealer\":-1}").Status.Contains("D badge"), "missing badge has actionable diagnostic");
 Check(TablePositionParser.Parse("{\"clear\":false,\"reason\":\"seats_unclear\",\"seats\":[],\"dealer\":-1}").Status.Contains("occupied player seats"), "unclear seats diagnostic distinguished");
 // Three coloured pixels stand in for small badges in a 434x770 portrait capture.
