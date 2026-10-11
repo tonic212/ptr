@@ -242,12 +242,12 @@ positionConfirmation.Observe(PositionObservation.Unknown("unclear"));
 Check(!positionConfirmation.Observe(heroBb).Success, "unknown position resets confirmation");
 using var positionHandler = new FakeOllamaHandler();
 using var positionReader = new PokerCompanion.App.Services.Recognition.OllamaVisionCardReader(positionHandler);
-string positionJson = JsonSerializer.Serialize(new { clear = true, seats = sixSeats.Select(s => new { x = s.X, y = s.Y }), dealer = 5 });
+string positionJson = JsonSerializer.Serialize(new { clear = true, seats = sixSeats.Skip(1).Select(s => new { x = s.X, y = s.Y }), dealer = 4 });
 positionHandler.Body = JsonSerializer.Serialize(new { done = true, message = new { content = positionJson } });
 Check((await positionReader.ReadPositionAsync([1,2,3], "local", CancellationToken.None)).Position == "SB", "position transport and parser");
 using (var body = JsonDocument.Parse(positionHandler.LastBody!))
 {
-    Check(body.RootElement.GetProperty("format").GetProperty("properties").GetProperty("seats").GetProperty("maxItems").GetInt32() == 9, "position output bounded");
+    Check(body.RootElement.GetProperty("format").GetProperty("properties").GetProperty("seats").GetProperty("maxItems").GetInt32() == 8, "position output bounded");
     Check(body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32() == 384, "position token budget bounded");
     Check(body.RootElement.GetProperty("options").GetProperty("num_ctx").GetInt32() >= 4644 + 384, "context accommodates observed seat prompt plus output budget");
 }
@@ -327,6 +327,14 @@ vm.ApplyPosition(heroSb);
 vm.ApplyPosition(PositionObservation.Unknown("Position reading: context exceeded"));
 Check(vm.Hand == "A7o" && vm.RecognizedCards.Contains("7h Ac"), "position failure preserves independently confirmed cards");
 Check(vm.SelectedChart is null && vm.Action == "Waiting for position", "position failure clears stale range only");
+string OpponentReading(SeatPoint[] opponents, int dealer) => JsonSerializer.Serialize(new { clear = true, reason = "ok", seats = opponents.Select(s => new { x = s.X, y = s.Y }), dealer });
+Check(TablePositionParser.ParseOpponents(OpponentReading(sixSeats.Skip(1).ToArray(), 4)).Position == "SB", "known bottom hero cannot be omitted by model");
+Check(TablePositionParser.ParseOpponents(OpponentReading(sixSeats.Skip(1).ToArray(), -1)).Position == "BTN", "hero-owned dealer sentinel maps to BTN");
+Check(TablePositionParser.ParseOpponents(OpponentReading(observedFourSeats.Skip(1).ToArray(), 2)).Position == "BB", "opponent-only four player reading maps BB");
+Check(!TablePositionParser.ParseOpponents(OpponentReading(sixSeats, 4)).Success, "accidental hero in opponents is rejected rather than double counted");
+Check(!TablePositionParser.ParseOpponents(OpponentReading(sixSeats.Skip(1).ToArray(), 5)).Success, "opponent dealer out of bounds rejected");
+Check(!TablePositionParser.ParseOpponents(OpponentReading([new(.1,.3)], -1)).Success, "opponent-only heads up unsupported");
+Check(!TablePositionParser.ParseOpponents(OpponentReading([new(.1,.3),new(.1,.3)], 0)).Success, "opponent duplicate rejected with anchored hero");
 Console.WriteLine($"PASS: {assertions} recognition assertions.");
 
 

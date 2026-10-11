@@ -51,7 +51,7 @@
       </StackPanel>
     </ScrollViewer>
     <TabControl x:Name="PreviewTabs" Grid.Column="2">
-      <TabItem Header="Source chart"><ScrollViewer><Image Source="{Binding ChartImage}" Stretch="Uniform" VerticalAlignment="Top"/></ScrollViewer></TabItem>
+      <TabItem Header="Source chart"><ScrollViewer><Image Source="{Binding ChartImage, Converter={StaticResource ChartImageConverter}, TargetNullValue={x:Null}, FallbackValue={x:Null}}" Stretch="Uniform" VerticalAlignment="Top"/></ScrollViewer></TabItem>
       <TabItem x:Name="WindowPreviewTab" Header="Window preview">
         <Grid x:Name="PreviewHost" Background="#202124" MouseLeftButtonDown="SelectionDown" MouseMove="SelectionMove" MouseLeftButtonUp="SelectionUp">
           <Image x:Name="Preview" Stretch="Uniform"/>

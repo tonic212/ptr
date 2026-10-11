@@ -18,6 +18,12 @@ public partial class App : System.Windows.Application
                 var charts = new ChartRepository().Load();
                 string seeds = Path.Combine(BundledDataStore.Root, "Data", "recognition-seeds.json");
                 if (!File.Exists(seeds)) throw new InvalidDataException("Bundled recognition seeds missing.");
+                var converter = new ChartImageConverter();
+                if (converter.Convert(null!, typeof(System.Windows.Media.ImageSource), null!, System.Globalization.CultureInfo.InvariantCulture) is not null)
+                    throw new InvalidDataException("Empty chart did not produce an empty image.");
+                string chartPath = Path.Combine(BundledDataStore.Root, charts[0].ImagePath);
+                if (converter.Convert(chartPath, typeof(System.Windows.Media.ImageSource), null!, System.Globalization.CultureInfo.InvariantCulture) is not System.Windows.Media.Imaging.BitmapSource)
+                    throw new InvalidDataException("Source chart image failed to load.");
                 File.WriteAllText(e.Args[1], $"PASS: standalone assets loaded; {charts.Count} charts.");
                 Shutdown(0);
             }

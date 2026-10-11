@@ -19,7 +19,9 @@ public sealed record PositionVisionInput(byte[] TablePng, IReadOnlyList<byte[]> 
 public static class TablePositionParser
 {
     private static readonly string[] Positions = ["UTG", "UTG+1", "UTG+2", "LJ", "HJ", "CO", "BTN", "SB", "BB"];
-    public static PositionObservation Parse(string json)
+    public static PositionObservation Parse(string json) => ParseInternal(json, false);
+    public static PositionObservation ParseOpponents(string json) => ParseInternal(json, true);
+    private static PositionObservation ParseInternal(string json, bool opponentsOnly)
     {
         try
         {
@@ -37,7 +39,16 @@ public static class TablePositionParser
             }
             var seats = root.GetProperty("seats").EnumerateArray()
                 .Select(s => new SeatPoint(s.GetProperty("x").GetDouble(), s.GetProperty("y").GetDouble())).ToArray();
-            return Calculate(seats, root.GetProperty("dealer").GetInt32());
+            int dealer = root.GetProperty("dealer").GetInt32();
+            if (!opponentsOnly) return Calculate(seats, dealer);
+            if (seats.Length < 2 || seats.Length > 8 || dealer < -1 || dealer >= seats.Length)
+                return PositionObservation.Unknown("Need 2–8 opponents and a visible D badge owner. Heads-up charts are not available.");
+            if (seats.Any(s => s.X >= .30 && s.X <= .70 && s.Y >= .72))
+                return PositionObservation.Unknown("The model included bottom hero in the opponent list. Checking again.");
+            // Hero is the known bottom seat, independently established by card
+            // recognition. A model cannot omit or relocate that anchor.
+            SeatPoint[] anchored = [new(.5, .86), .. seats];
+            return Calculate(anchored, dealer + 1);
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException)
         { return PositionObservation.Unknown("Invalid seat/button reading. Checking again."); }
