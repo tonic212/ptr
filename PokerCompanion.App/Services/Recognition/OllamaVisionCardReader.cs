@@ -82,9 +82,9 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IVisionPositionR
         if (images.DetailPngs.Count is not (0 or 3)) throw new ArgumentException("Expected left, right and bottom seat detail images.");
         byte[][] pngs = new[] { images.TablePng }.Concat(images.DetailPngs).ToArray();
         if (pngs.Any(png => png.Length == 0 || png.Length > 4 * 1024 * 1024)) throw new ArgumentException("Invalid table image size.");
-        const string prompt = "Locate occupied poker PLAYER seats and the DEALER BUTTON on this PPPoker table. "
+        const string prompt = "Locate occupied poker PLAYER seats and the DEALER BUTTON on this PPPoker table. Return each player avatar CENTRE, not a bounding box corner. "
             + "Image 1 is the FULL TABLE. If four images are supplied, images 2, 3, 4 are enlarged LEFT, RIGHT, BOTTOM seat areas from the SAME capture. "
-            + "Use those detail images to read tiny badges, but return ALL seat x,y coordinates normalized from 0 to 1 in IMAGE 1, never in a detail crop. "
+            + "Use those detail images to read tiny badges, but return ALL seat x,y coordinates normalized from 0 to 1 in IMAGE 1, never in a detail crop. Image coordinates start at TOP LEFT (0,0) and end at BOTTOM RIGHT (1,1). "
             + "A player seat has an avatar with a player-name/stack panel. Include folded players: Fold text, grey avatars, or missing hole cards do NOT mean an empty seat. "
             + "Exclude seats explicitly labelled Empty and the decorative female dealer at the TOP CENTRE, which has no player-name/stack panel. "
             + "A single occupied seat may show a pair of card backs, bets, action labels or flags; these are not additional players. "
