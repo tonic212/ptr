@@ -195,7 +195,8 @@ using (var tenDocument = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppCon
             Array.Copy(tenFrame.Bgra, ((y / 2) * tenFrame.Width + x / 2) * 4, resizedBytes, (y * tenFrame.Width * 2 + x) * 4, 4);
     var resizedTen = HeroVisionPreparation.Create(new(tenFrame.Width * 2, tenFrame.Height * 2, resizedBytes));
     Check(resizedTen.SecondPrintedTen, "printed ten guard survives doubled size");
-    Reject(() => HeroVisionPreparation.Create(new(800, 600, new byte[800 * 600 * 4])), "vision requires selected portrait table");
+    try { HeroVisionPreparation.Create(new(800, 600, new byte[800 * 600 * 4])); throw new Exception("FAILED: portrait selection"); }
+    catch (InvalidOperationException) { assertions++; }
     try { HeroVisionPreparation.Create(new(tenFrame.Width, tenFrame.Height, new byte[tenFrame.Bgra.Length])); throw new Exception("FAILED: empty vision crop"); }
     catch (InvalidOperationException) { assertions++; }
 }
