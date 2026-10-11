@@ -9,22 +9,30 @@ public sealed class FastPositionTracker
     private byte[][] _fingerprints = [];
     private double _aspect;
     private DateTime _expires;
+    public string InitializationStatus { get; private set; } = "Identifying occupied and empty seats once for fast badge tracking.";
     public bool HasLayout => _layout is not null;
     public FastPositionTracker(DealerButtonDetector detector) => _detector = detector;
-    public void Reset() { _layout = null; _slots = []; _fingerprints = []; _confirmation.Reset(); }
+    public void Reset() { _layout = null; _slots = []; _fingerprints = []; _confirmation.Reset(); InitializationStatus = "Identifying occupied and empty seats once for fast badge tracking."; }
     public bool Initialize(PixelFrame frame, PositionObservation layout, DateTime now)
     {
         Reset();
-        if (!layout.Success || !layout.LayoutComplete || layout.Seats.Count != layout.PlayerCount
-            || !_detector.TryFind(frame, layout.Seats, out var badge) || badge!.SeatIndex != layout.DealerSeatIndex) return false;
+        if (!layout.Success) return Failed(layout.Status);
+        if (!layout.LayoutComplete) return Failed("Model did not confirm every occupied and empty seat.");
+        if (layout.Seats.Count != layout.PlayerCount) return Failed("Model seat count does not match its layout.");
+        if (!_detector.TryFind(frame, layout.Seats, out var badge))
+            return Failed("CPU could not match one clear D badge to the model's seat locations.");
+        if (badge!.SeatIndex != layout.DealerSeatIndex)
+            return Failed($"D owner disagreement: model seat {layout.DealerSeatIndex}, CPU seat {badge.SeatIndex}. Refreshing layout.");
         _layout = layout; _slots = layout.Seats.Concat(layout.VacantSeats).ToArray();
         _fingerprints = _slots.Select(s => Fingerprint(frame, s)).ToArray();
         _aspect = frame.Width / (double)frame.Height; _expires = now.AddMinutes(2);
+        InitializationStatus = "Fast D-badge tracking initialized.";
         return true;
     }
+    private bool Failed(string status) { InitializationStatus = status; return false; }
     public PositionObservation Observe(PixelFrame frame, DateTime now)
     {
-        if (_layout is null) return PositionObservation.Unknown("Identifying occupied and empty seats once for fast badge tracking.");
+        if (_layout is null) return PositionObservation.Unknown(InitializationStatus);
         if (now >= _expires || Math.Abs(frame.Width / (double)frame.Height / _aspect - 1) > .03)
         { Reset(); return PositionObservation.Unknown("Seat layout expired or table proportions changed. Refreshing layout."); }
         for (int i = 0; i < _slots.Length; i++)

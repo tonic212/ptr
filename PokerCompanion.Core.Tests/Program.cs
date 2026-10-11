@@ -376,6 +376,10 @@ Check(fastTracker.Observe(new(rightLowerD.Width*2,rightLowerD.Height*2,doubledPo
 Check(!fastTracker.Observe(rightLowerD, fastNow.AddMinutes(2)).Success && !fastTracker.HasLayout, "layout periodically expires for revalidation");
 Check(!fastTracker.Initialize(rightUpperD, heroBb, fastNow), "incomplete seat roster cannot be cached");
 Check(!fastTracker.Initialize(rightUpperD, heroSb with { LayoutComplete = true }, fastNow), "model D owner must agree with visible template");
+Check(fastTracker.InitializationStatus.Contains("D owner disagreement"), "D owner disagreement diagnostic retained");
+Check(fastTracker.Observe(rightUpperD, fastNow).Status == fastTracker.InitializationStatus, "bootstrap failure stays visible between captures");
+Check(!fastTracker.Initialize(hiddenBadge, fastLayout, fastNow), "missing CPU badge rejects initialization");
+Check(fastTracker.InitializationStatus.Contains("could not match"), "missing badge distinguished from incomplete roster");
 SeatPoint[] threeSeats = [new(.5,.86),new(.10,.60),new(.90,.30)];
 var threeLayout = TablePositionParser.Calculate(threeSeats,2) with { LayoutComplete = true, VacantSeats = [new(.1,.3),new(.9,.6)] };
 Check(fastTracker.Initialize(rightUpperD, threeLayout, fastNow), "occupied and Empty slots cached together");
@@ -394,6 +398,12 @@ string completeRoster = JsonSerializer.Serialize(new { clear=true, reason="ok", 
     vacant=new[]{new{x=.1,y=.3},new{x=.9,y=.6}},layout_complete=true });
 var completeReading = TablePositionParser.ParseOpponents(completeRoster);
 Check(completeReading.Success && completeReading.LayoutComplete && completeReading.VacantSeats.Count==2 && completeReading.Seats.Count==3, "layout metadata retained for fast tracker");
+foreach (var empty in new[] { new SeatPoint(.5,.5), new SeatPoint(.45,.85) })
+{
+    string invalidRoster = JsonSerializer.Serialize(new { clear=true, reason="ok", seats=threeSeats.Skip(1).Select(s=>new{x=s.X,y=s.Y}), dealer=1,
+        vacant=new[]{new{x=empty.X,y=empty.Y}},layout_complete=true });
+    Check(!TablePositionParser.ParseOpponents(invalidRoster).Success, "logged central or hero empty-seat hallucination rejected");
+}
 fastTracker.Initialize(rightUpperD, fastLayout, fastNow);
 var fastWatch = System.Diagnostics.Stopwatch.StartNew();
 for (int i=0;i<10;i++) fastTracker.Observe(rightUpperD, fastNow.AddMilliseconds(i*250));

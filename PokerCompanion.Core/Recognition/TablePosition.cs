@@ -57,7 +57,7 @@ public static class TablePositionParser
             SeatPoint[] vacant = root.TryGetProperty("vacant", out var empty)
                 ? empty.EnumerateArray().Select(s => new SeatPoint(s.GetProperty("x").GetDouble(), s.GetProperty("y").GetDouble())).ToArray() : [];
             var all = anchored.Concat(vacant).ToArray();
-            if (all.Length > 9 || vacant.Any(s => !double.IsFinite(s.X) || !double.IsFinite(s.Y) || s.X < 0 || s.X > 1 || s.Y < 0 || s.Y > 1))
+            if (all.Length > 9 || vacant.Any(s => !ValidSeatLocation(s) || (s.X >= .30 && s.X <= .70 && s.Y >= .72)))
                 return PositionObservation.Unknown("Invalid empty-seat layout.");
             for (int i = 0; i < all.Length; i++)
                 for (int j = 0; j < i; j++)
@@ -68,6 +68,10 @@ public static class TablePositionParser
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException)
         { return PositionObservation.Unknown("Invalid seat/button reading. Checking again."); }
     }
+    private static bool ValidSeatLocation(SeatPoint s) => double.IsFinite(s.X) && double.IsFinite(s.Y)
+        && s.X >= 0 && s.X <= 1 && s.Y >= 0 && s.Y <= 1
+        && !(Math.Abs(s.X - .5) < .17 && Math.Abs(s.Y - .48) < .17);
+
     public static PositionObservation Calculate(IReadOnlyList<SeatPoint> seats, int dealer)
     {
         if (seats.Count < 3 || seats.Count > 9 || dealer < 0 || dealer >= seats.Count)
@@ -75,8 +79,7 @@ public static class TablePositionParser
         for (int i = 0; i < seats.Count; i++)
         {
             var s = seats[i];
-            if (!double.IsFinite(s.X) || !double.IsFinite(s.Y) || s.X < 0 || s.X > 1 || s.Y < 0 || s.Y > 1
-                || (Math.Abs(s.X - .5) < .17 && Math.Abs(s.Y - .48) < .17))
+            if (!ValidSeatLocation(s))
                 return PositionObservation.Unknown("Invalid player-seat location.");
             for (int j = 0; j < i; j++)
                 if (Math.Pow(s.X - seats[j].X, 2) + Math.Pow(s.Y - seats[j].Y, 2) < .0064)

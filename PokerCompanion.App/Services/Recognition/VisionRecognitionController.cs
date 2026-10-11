@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -113,18 +114,23 @@ public sealed class VisionRecognitionController : IDisposable
         {
             var reading = await reader.ReadPositionAsync(PositionVisionImages.Create(table), model, cancellation.Token);
             if (_disposed || generation != _generation || _latestTable is null) return;
+            Debug.WriteLine($"Position layout parsed: success={reading.Success}, players={reading.PlayerCount}, vacant={reading.VacantSeats.Count}, complete={reading.LayoutComplete}, elapsed={(DateTime.UtcNow - capturedAt).TotalSeconds:F1}s, status={reading.Status}");
             if (staticPreview) { PositionReady?.Invoke(reading, true); return; }
             if (DateTime.UtcNow - capturedAt >= TimeSpan.FromSeconds(20))
                 reading = PositionObservation.Unknown("Layout response is too old. Checking a fresh capture.");
             if (reading.Success && _fast?.Initialize(FrameAdapter.ToPixels(table), reading, capturedAt) == true)
             {
+                Debug.WriteLine("Position tracker: " + _fast.InitializationStatus);
                 _fallback = null; _fallbackConfirmation.Reset();
                 PositionReady?.Invoke(_fast.Observe(FrameAdapter.ToPixels(_latestTable), DateTime.UtcNow), false);
             }
             else
             {
+                string diagnostic = !reading.Success ? reading.Status : _fast?.InitializationStatus ?? "CPU tracker is unavailable.";
+                Debug.WriteLine("Position tracker: " + diagnostic);
                 var result = _fallbackConfirmation.Observe(reading);
-                _fallback = result.Success ? result with { Status = result.Status + " Slow vision fallback; D badge not matched for fast tracking." } : null;
+                if (reading.Success) result = result with { Status = result.Status + " Slow vision fallback: " + diagnostic };
+                _fallback = result.Success ? result : null;
                 _fallbackExpires = capturedAt.AddSeconds(20);
                 PositionReady?.Invoke(_fallback ?? result, false);
             }
