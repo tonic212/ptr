@@ -54,6 +54,7 @@ public sealed class VisionRecognitionController : IDisposable
             HandObservation reading = await _reader.ReadAsync(image.Png, model, cancellation.Token);
             if (_disposed || generation != _generation || _latest is null
                 || !VisionFrameGuard.Matches(image.Pixels, _latest.Pixels)) return;
+            reading = image.Evidence?.Validate(reading) ?? reading;
             var result = staticPreview ? reading : _confirmation.Observe(reading);
             _confirmed = !staticPreview && result.Success;
             Publish(result, staticPreview);

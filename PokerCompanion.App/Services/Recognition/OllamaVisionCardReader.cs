@@ -15,14 +15,15 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IDisposable
 {
     private readonly HttpClient _http;
     private readonly ILocalModelHost? _host;
-    private const string Prompt = "Read the TWO face-up hero playing cards in this cropped PPPoker image, left to right. "
-        + "Read each small rank and suit; ignore avatars, badges, chips, buttons and text. "
-        + "Ranks: A K Q J T 9 8 7 6 5 4 3 2. Suits: c=clubs d=diamonds h=hearts s=spades. "
-        + "A four-colour deck may have green clubs, blue diamonds, red hearts and black spades. "
-        + "Use shape as well as colour. Do not infer cards from context. "
-        + "If either card is hidden, cut off, absent or unclear, return visible=false and cards=[]. "
-        + "Otherwise return visible=true and exactly two card strings, for example Ac and 7h. "
-        + "Return only the requested JSON object, without strategy or explanations.";
+    private const string Prompt = "Read the TWO face-up hero playing cards, left to right. The image may show two isolated enlarged card corners on white panels. "
+        + "When panels are shown, the left is card 1 and the right is card 2. Read each small printed rank and suit. Ignore avatars, chips, badges, buttons and other text. "
+        + "Transcribe each printed rank exactly: A K Q J 10 9 8 7 6 5 4 3 2. "
+        + "The printed two-digit number 10 is TEN, not A, not 1, and not 0. Preserve both digits as 10 in your response. "
+        + "Suits: c=club (three lobes), d=diamond, h=heart, s=spade. "
+        + "The deck may use green clubs, blue diamonds, red hearts, black spades. Use symbol shape as well as colour. "
+        + "Return visible=true only if BOTH printed ranks and suits are clear; otherwise visible=false and cards=[]. "
+        + "Return the two card strings in left-to-right order using the printed rank followed by c/d/h/s. "
+        + "Do not infer, guess, or complete unclear text. Return only the requested JSON object.";
 
     public OllamaVisionCardReader() : this(new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false }) { }
     public OllamaVisionCardReader(ILocalModelHost host) : this(new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false }, host) { }
@@ -56,7 +57,7 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IDisposable
             properties = new
             {
                 visible = new { type = "boolean" },
-                cards = new { type = "array", items = new { type = "string", pattern = "^[AKQJT2-9][cdhs]$" }, maxItems = 2 }
+                cards = new { type = "array", items = new { type = "string", pattern = "^(10|[AKQJT2-9])[cdhs]$" }, maxItems = 2 }
             },
             required = new[] { "visible", "cards" },
             additionalProperties = false
