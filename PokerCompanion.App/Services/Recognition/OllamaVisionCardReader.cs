@@ -65,7 +65,7 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IVisionPositionR
         var payload = new
         {
             model, stream = false, format = schema, keep_alive = "5m",
-            options = new { temperature = 0, num_predict = 96, num_ctx = 4096 },
+            options = new { temperature = 0, num_predict = 96, num_ctx = 8192 },
             messages = new[] { new { role = "user", content = Prompt, images = new[] { Convert.ToBase64String(png) } } }
         };
         string? content = await SendReadingAsync(payload, cancellationToken);
@@ -110,7 +110,7 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IVisionPositionR
         var payload = new
         {
             model, stream = false, format = schema, keep_alive = "5m",
-            options = new { temperature = 0, num_predict = 384, num_ctx = 4096 },
+            options = new { temperature = 0, num_predict = 384, num_ctx = 8192 },
             messages = new[] { new { role = "user", content = prompt, images = pngs.Select(Convert.ToBase64String).ToArray() } }
         };
         string? content = await SendReadingAsync(payload, cancellationToken);

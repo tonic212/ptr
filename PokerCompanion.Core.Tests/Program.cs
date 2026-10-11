@@ -154,6 +154,7 @@ using (var sent = JsonDocument.Parse(fake.LastBody!))
     Check(sent.RootElement.GetProperty("messages")[0].GetProperty("images")[0].GetString() == "AQID", "vision sends encoded crop");
     Check(sent.RootElement.GetProperty("format").GetProperty("additionalProperties").ValueKind == JsonValueKind.False, "vision constrained response schema");
     Check(sent.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32() == 96, "vision token budget bounded");
+    Check(sent.RootElement.GetProperty("options").GetProperty("num_ctx").GetInt32() == 8192, "card context matches multi-image runner context");
 }
 Reject(() => reader.ReadAsync(new byte[] { 1 }, "qwen3-vl:cloud", CancellationToken.None).GetAwaiter().GetResult(), "cloud model names rejected");
 fake.Body = "{\"done\":false,\"message\":{\"content\":\"{}\"}}";
@@ -248,6 +249,7 @@ using (var body = JsonDocument.Parse(positionHandler.LastBody!))
 {
     Check(body.RootElement.GetProperty("format").GetProperty("properties").GetProperty("seats").GetProperty("maxItems").GetInt32() == 9, "position output bounded");
     Check(body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32() == 384, "position token budget bounded");
+    Check(body.RootElement.GetProperty("options").GetProperty("num_ctx").GetInt32() >= 4644 + 384, "context accommodates observed seat prompt plus output budget");
 }
 var vm = new PokerCompanion.App.ViewModels.MainViewModel();
 Check(vm.SelectedChart is null, "automatic range starts without stale chart");
@@ -319,6 +321,12 @@ using (var body = JsonDocument.Parse(positionHandler.LastBody!))
 }
 Reject(() => positionReader.ReadPositionAsync(new PositionVisionInput([1], new byte[][] { [2] }), "local", CancellationToken.None).GetAwaiter().GetResult(), "partial detail set rejected");
 Reject(() => positionReader.ReadPositionAsync(new PositionVisionInput([1], new byte[][] { [], [2], [3] }), "local", CancellationToken.None).GetAwaiter().GetResult(), "empty detail image rejected");
+vm.UseDetectedHand = true; vm.Scenario = "RFI";
+vm.ApplyObservation(new(true, "7h Ac", "A7o", "confirmed"));
+vm.ApplyPosition(heroSb);
+vm.ApplyPosition(PositionObservation.Unknown("Position reading: context exceeded"));
+Check(vm.Hand == "A7o" && vm.RecognizedCards.Contains("7h Ac"), "position failure preserves independently confirmed cards");
+Check(vm.SelectedChart is null && vm.Action == "Waiting for position", "position failure clears stale range only");
 Console.WriteLine($"PASS: {assertions} recognition assertions.");
 
 

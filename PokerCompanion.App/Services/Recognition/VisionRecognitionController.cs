@@ -77,18 +77,29 @@ public sealed class VisionRecognitionController : IDisposable
             }
             else if (DetectPosition && _reader is IVisionPositionReader positions && (staticPreview || DateTime.UtcNow >= _nextPositionRead))
             {
-                // Use the freshest capture after card inference, not the older frame
-                // from before it. Detail crops and full table come from this one capture.
-                BitmapSource positionTable = _latestTable ?? table;
-                DateTime capturedAt = DateTime.UtcNow;
-                var position = await positions.ReadPositionAsync(PositionVisionImages.Create(positionTable), model, cancellation.Token);
-                if (_disposed || generation != _generation || _latest is null || !VisionFrameGuard.Matches(image.Pixels, _latest.Pixels)) return;
-                if (!staticPreview && DateTime.UtcNow - capturedAt >= TimeSpan.FromSeconds(20))
-                    position = PositionObservation.Unknown("Seat/button response is too old. Checking a fresh capture.");
-                position = staticPreview ? position : _positionConfirmation.Observe(position);
-                _positionExpires = position.Success && !staticPreview ? capturedAt.AddSeconds(20) : DateTime.MinValue;
-                _nextPositionRead = DateTime.UtcNow.AddSeconds(4);
-                PositionReady?.Invoke(position, staticPreview);
+                try
+                {
+                    // Use the freshest capture after card inference, not the older frame
+                    // from before it. Detail crops and full table come from this one capture.
+                    BitmapSource positionTable = _latestTable ?? table;
+                    DateTime capturedAt = DateTime.UtcNow;
+                    var position = await positions.ReadPositionAsync(PositionVisionImages.Create(positionTable), model, cancellation.Token);
+                    if (_disposed || generation != _generation || _latest is null || !VisionFrameGuard.Matches(image.Pixels, _latest.Pixels)) return;
+                    if (!staticPreview && DateTime.UtcNow - capturedAt >= TimeSpan.FromSeconds(20))
+                        position = PositionObservation.Unknown("Seat/button response is too old. Checking a fresh capture.");
+                    position = staticPreview ? position : _positionConfirmation.Observe(position);
+                    _positionExpires = position.Success && !staticPreview ? capturedAt.AddSeconds(20) : DateTime.MinValue;
+                    _nextPositionRead = DateTime.UtcNow.AddSeconds(4);
+                    PositionReady?.Invoke(position, staticPreview);
+                }
+                catch (OperationCanceledException)
+                {
+                    PositionFailed("Position request timed out. Checking again with a fresh capture.", staticPreview, generation);
+                }
+                catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or ArgumentException or System.Text.Json.JsonException or System.IO.IOException)
+                {
+                    PositionFailed("Position reading: " + ex.Message, staticPreview, generation);
+                }
             }
         }
         catch (OperationCanceledException)
@@ -115,6 +126,15 @@ public sealed class VisionRecognitionController : IDisposable
                 _ = ReadAsync(_latest, _latestTable, true, _model, _generation);
             }
         }
+    }
+    // Seat inference is optional evidence. Its failure invalidates the range,
+    // but must not erase cards already independently confirmed by the card reader.
+    private void PositionFailed(string status, bool staticPreview, long generation)
+    {
+        if (_disposed || generation != _generation) return;
+        _positionConfirmation.Reset(); _positionExpires = DateTime.MinValue;
+        _nextPositionRead = DateTime.UtcNow.AddSeconds(4);
+        PositionReady?.Invoke(PositionObservation.Unknown(status), staticPreview);
     }
     private void Publish(HandObservation observation, bool staticPreview) => ObservationReady?.Invoke(observation, staticPreview);
     public void Dispose() { _disposed = true; Reset(); }

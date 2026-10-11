@@ -42,7 +42,7 @@ public sealed class LocalOllamaHost : ILocalModelHost, IDisposable
                 start.Environment["OLLAMA_NO_CLOUD"] = "1";
                 start.Environment["OLLAMA_NUM_PARALLEL"] = "1";
                 start.Environment["OLLAMA_MAX_LOADED_MODELS"] = "1";
-                start.Environment["OLLAMA_CONTEXT_LENGTH"] = "4096";
+                start.Environment["OLLAMA_CONTEXT_LENGTH"] = "8192";
                 // Reuse the standard model cache, including models already pulled
                 // by the user. This does not change system environment settings.
                 start.Environment["OLLAMA_MODELS"] = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ollama", "models");
