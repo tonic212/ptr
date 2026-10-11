@@ -7,10 +7,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../PokerCompanion.App/Services/Recognition/OllamaVisionCardReader.cs" Link="OllamaVisionCardReader.cs" />
+    <Compile Include="../PokerCompanion.App/Services/ChartRepository.cs" Link="ChartRepository.cs" />
+    <Compile Include="../PokerCompanion.App/Services/BundledDataStore.cs" Link="BundledDataStore.cs" />
+    <Compile Include="../PokerCompanion.App/ViewModels/MainViewModel.cs" Link="MainViewModel.cs" />
     <ProjectReference Include="../PokerCompanion.Core/PokerCompanion.Core.csproj" />
     <Content Include="automatic-frames.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="vision-ten-frame.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="sample-frame.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../PokerCompanion.App/Data/recognition-seeds.json" Link="recognition-seeds.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../PokerCompanion.App/Data/charts.json" Link="Data/charts.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../PokerCompanion.App/Data/Charts/*.png" Link="Data/Charts/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

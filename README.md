@@ -43,7 +43,7 @@ The vision path does not require manually taught rank templates. It remains capa
 
 Architecture: `IVisionCardReader`, response parsing and confirmation live in Core; `OllamaVisionCardReader`, `HeroVisionImage` and `VisionRecognitionController` adapt local HTTP, WPF image capture and asynchronous UI delivery. `MainWindow` connects the services to capture and controls. There is no additional NuGet dependency.
 
-Future solver integration should consume validated game state (hero/board cards, positions, stacks, pot and action history) and a separate solver interface. Solver action frequencies/EVs remain authoritative; model prose must not invent solver outputs. This change implements hero-card reading only, not board/bet reading, solver calls or LLM strategy generation.
+Future solver integration should consume validated game state (hero/board cards, positions, stacks, pot and action history) and a separate solver interface. Solver action frequencies/EVs remain authoritative; model prose must not invent solver outputs. The app implements hero-card and seat/button reading, not board/bet reading, solver calls or LLM strategy generation.
 
 References: https://ollama.com/library/qwen3-vl/tags ; https://docs.ollama.com/api/chat ; https://docs.ollama.com/capabilities/vision ; https://docs.ollama.com/capabilities/structured-outputs
 
@@ -61,14 +61,14 @@ References: https://ollama.com/library/qwen3-vl/tags ; https://docs.ollama.com/a
 - Capture frames remain in memory; cropped cards are sent only to local Ollama when vision is enabled. No video storage or account connection.
 
 ## Not implemented
-Seat/position recognition, board/street detection, betting-history tracking, equity calculation, solver integration and exact tournament ICM. Chart scenario, positions, street and stack must be set manually. Recognition only supplies your two-card hand class.
+Board/street detection, betting-history tracking, equity calculation, solver integration and exact tournament ICM. Action scenario, opponent position, street and stack remain manual. Position detection does not determine whether someone has raised.
 
 ## Use
-1. Select the chart that matches the positions and prior actions.
+1. Leave **Detect hero position and switch ranges** checked and enable local vision for automatic selection. Select the action scenario and, when facing a raise/3-bet, the opponent position. For exact manual chart selection, turn off automatic position.
 2. Enter effective stack in BB. For manual entry, uncheck **Use detected hand**, then enter AA, AKs or AKo.
 3. Confirm ante. If payout-sensitive ICM is required, tick that option; the app suppresses the chart prescription.
 4. Check the action against the source chart before trusting converted data.
-5. Show floating result to place the manually selected result beside your table.
+5. Show floating result to display cards, detected position and the selected chart result beside your table.
 6. Refresh windows, select PPPoker (Steam), and start preview. Keep the target visible, unobstructed and restored. Stop preview when finished.
 
 7. With local vision disabled, leave **Find bottom hero cards automatically** checked (default). No calibration is needed for the supplied portrait table layout: the locator searches for two face-up card backgrounds at the bottom seat. It relocates them each frame and after resizing. The detector does not infer your seat in other layouts.
@@ -79,6 +79,18 @@ Seat/position recognition, board/street detection, betting-history tracking, equ
 Calibration is saved to `%LOCALAPPDATA%\PokerCompanion\recognition-profile.json`. Recalibrate after changing table layout or window proportions. Different rendering scales may need more teaching examples. Unknown, obstructed or ambiguous symbols clear the automatic hand/result. Template match scores are similarity measures, not calibrated probabilities of correctness. This version does not calculate equity or claim exact GTO recommendations.
 
 The preview captures the visible desktop rectangle of the selected window, including occluding windows. It does not capture hidden/minimized contents. There is no stealth, detection bypass, automated betting or memory/network interception.
+
+## Automatic position and range switching
+
+After confirming the hero cards, the same local vision model reads the whole selected portrait table. It returns occupied player-seat centres and the seat holding the small D dealer button. Folded players must still count; empty/sitting-out seats and the decorative dealer avatar must not count. Code orders the seats clockwise and derives hero position, rather than asking the model to recommend a position or action.
+
+Two matching layouts from separate live captures are required. Card changes, invalid/unclear layouts, capture/model changes, or expired position readings clear the automatic chart. Position is rechecked after a 4-second cooldown; card and position requests run sequentially to avoid competing GPU requests. Position expires after 20 seconds without a successful refresh. Capture and inference latency means detection is not instantaneous. A frozen screenshot shows a position preview only and cannot select a live range.
+
+The source charts use nine-seat labels: UTG, UTG+1, UTG+2, LJ, HJ, CO, BTN, SB, BB. At 3–8 player tables, labels map by distance from BTN (six-handed first-to-act maps to LJ). These are approximations using the existing nine-seat source, not independently solved short-handed ranges. Heads-up is unsupported. Opponent labels must use the same source-chart mapping.
+
+Opening (**RFI**) selection switches with hero position. There is no BB RFI chart, so BB shows **No matching range**. Facing raises/3-bets requires an explicit opponent position; grouped source charts such as UTG/UTG+1 are matched automatically. The SB limp-versus-BB-raise chart has its own scenario. Missing combinations never fall back to another range. Select the action scenario each hand; the app does not read bets or action history.
+
+Seat/button inference can be wrong even when two responses agree. Check the displayed position against the table before relying on the chart. Tests cover all dealer rotations for 3–9 seats, parsing/confirmation, chart matching for all existing scenarios and ViewModel transitions using mocked model responses. Actual PPPoker seat/button inference and GPU latency require testing on the Windows PC.
 
 ## Source assumptions
 PokerCoaching source PDF: 100 BB effective stacks with an ante; author suggests approximate applicability from 50 BB upwards. These are starting charts, not documented exact solver outputs. No lower-stack/ICM solutions are fabricated.

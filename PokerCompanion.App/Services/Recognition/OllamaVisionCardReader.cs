@@ -11,7 +11,7 @@ using PokerCompanion.Core.Recognition;
 
 namespace PokerCompanion.App.Services.Recognition;
 
-public sealed class OllamaVisionCardReader : IVisionCardReader, IDisposable
+public sealed class OllamaVisionCardReader : IVisionCardReader, IVisionPositionReader, IDisposable
 {
     private readonly HttpClient _http;
     private readonly ILocalModelHost? _host;
@@ -68,9 +68,47 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IDisposable
             options = new { temperature = 0, num_predict = 96, num_ctx = 4096 },
             messages = new[] { new { role = "user", content = Prompt, images = new[] { Convert.ToBase64String(png) } } }
         };
+        string? content = await SendReadingAsync(payload, cancellationToken);
+        return content is null ? new(false, "", "", "Ollama returned an incomplete reading.") : VisionCardResponseParser.Parse(content);
+    }
+
+    public async Task<PositionObservation> ReadPositionAsync(byte[] png, string model, CancellationToken cancellationToken)
+    {
+        ValidateModel(model);
+        if (_host is not null) await _host.EnsureReadyAsync(model, cancellationToken);
+        if (png.Length == 0 || png.Length > 4 * 1024 * 1024) throw new ArgumentException("Invalid table image size.");
+        const string prompt = "Locate poker PLAYER seats and the DEALER BUTTON in this portrait PPPoker table. "
+            + "Return seats as avatar/name-panel centre coordinates normalized x,y from 0 to 1 relative to the entire image. "
+            + "Include ALL players dealt into this hand, even if they have folded. Exclude empty seats, sit-out seats, central decorative dealer avatar, board cards and controls. "
+            + "The hero is the player at bottom centre. Locate the small circular D dealer-button badge; do not confuse it with a player avatar or the decorative dealer. "
+            + "dealer is the ZERO-BASED index in your seats array of the player holding that D button. Do not derive it from betting or visible cards. "
+            + "clear=true only if all participating seats and the button association are unambiguous; otherwise clear=false, seats=[], dealer=-1. "
+            + "Do not guess whether a sitting-out player was dealt in. Do not output poker positions or actions. Return only JSON.";
+        var schema = new
+        {
+            type = "object", properties = new
+            {
+                clear = new { type = "boolean" },
+                seats = new { type = "array", maxItems = 9, items = new {
+                    type = "object", properties = new { x = new { type = "number", minimum = 0, maximum = 1 }, y = new { type = "number", minimum = 0, maximum = 1 } },
+                    required = new[] { "x", "y" }, additionalProperties = false } },
+                dealer = new { type = "integer", minimum = -1, maximum = 8 }
+            }, required = new[] { "clear", "seats", "dealer" }, additionalProperties = false
+        };
+        var payload = new
+        {
+            model, stream = false, format = schema, keep_alive = "5m",
+            options = new { temperature = 0, num_predict = 384, num_ctx = 4096 },
+            messages = new[] { new { role = "user", content = prompt, images = new[] { Convert.ToBase64String(png) } } }
+        };
+        string? content = await SendReadingAsync(payload, cancellationToken);
+        return content is null ? PositionObservation.Unknown("Incomplete seat/button reading.") : TablePositionParser.Parse(content);
+    }
+
+    private async Task<string?> SendReadingAsync(object payload, CancellationToken cancellationToken)
+    {
         using var response = await _http.PostAsJsonAsync("api/chat", payload, cancellationToken);
         await EnsureSuccess(response, cancellationToken);
-        // The generation is deliberately short. Bound the response before parsing.
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var buffer = new MemoryStream();
         var chunk = new byte[4096];
@@ -83,9 +121,8 @@ public sealed class OllamaVisionCardReader : IVisionCardReader, IDisposable
         using var document = JsonDocument.Parse(buffer.ToArray());
         if (!document.RootElement.TryGetProperty("done", out var done) || done.ValueKind != JsonValueKind.True
             || !document.RootElement.TryGetProperty("message", out var message)
-            || !message.TryGetProperty("content", out var content) || content.ValueKind != JsonValueKind.String)
-            return new(false, "", "", "Ollama returned an incomplete reading.");
-        return VisionCardResponseParser.Parse(content.GetString()!);
+            || !message.TryGetProperty("content", out var content) || content.ValueKind != JsonValueKind.String) return null;
+        return content.GetString();
     }
 
     private static void ValidateModel(string model)

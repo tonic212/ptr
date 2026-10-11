@@ -40,6 +40,10 @@ public partial class MainWindow : Window
         InitializeComponent();
         _visionReader = new(_localHost);
         _vision = new(_visionReader);
+        _vision.PositionReady += (observation, staticPreview) =>
+        {
+            if (DataContext is MainViewModel model && VisionEnabled.IsChecked == true) model.ApplyPosition(observation, staticPreview);
+        };
         _localHost.Progress += status => Dispatcher.InvokeAsync(() => { if (!_lifetime.IsCancellationRequested) CaptureStatus.Text = status; });
         _vision.ObservationReady += (observation, staticPreview) =>
         {
@@ -75,7 +79,7 @@ public partial class MainWindow : Window
         if (ScreenCaptureService.IsPokerTitle(target.Title)) _capture.Focus(target);
         _target = target; _frozen = false; FreezeButton.Content = "Freeze frame";
         CaptureTargets.IsEnabled = false; CaptureButton.Content = "Stop preview";
-        _lastAutomaticMode = Model.AutomaticHeroCards; _vision.Reset(); _recognition.Reset(); _timer.Start(); PreviewTabs.SelectedItem = WindowPreviewTab;
+        _lastAutomaticMode = Model.AutomaticHeroCards; ClearRecognition("Checking current cards and position."); _timer.Start(); PreviewTabs.SelectedItem = WindowPreviewTab;
         CaptureFrame(this, EventArgs.Empty);
     }
     private void CaptureFrame(object? sender, EventArgs e)
@@ -86,9 +90,14 @@ public partial class MainWindow : Window
             if (_target is null) return;
             _rawFrame = _capture.Capture(_target);
             _lastFrame = PrepareTableFrame(_rawFrame); Preview.Source = _lastFrame;
+            _vision.DetectPosition = Model.AutomaticPosition;
             if (_lastAutomaticMode != Model.AutomaticHeroCards) { _recognition.Reset(); _lastAutomaticMode = Model.AutomaticHeroCards; }
             if (VisionEnabled.IsChecked == true) _vision.Submit(_lastFrame, false, VisionModel.Text.Trim());
-            else Model.ApplyObservation(_recognition.Observe(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards));
+            else
+            {
+                Model.ApplyPosition(PositionObservation.Unknown("Enable local vision for automatic position, or turn off automatic position to select a chart manually."));
+                Model.ApplyObservation(_recognition.Observe(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards));
+            }
             CaptureStatus.Text = $"Preview active: {_target.Title} ({_lastFrame.PixelWidth}×{_lastFrame.PixelHeight}). Frames remain in memory.";
         }
         catch (Exception ex) { StopCapture(ex.Message); }
@@ -234,6 +243,7 @@ public partial class MainWindow : Window
         _recognition.Reset();
         if (VisionEnabled.IsChecked == true)
         {
+            _vision.DetectPosition = Model.AutomaticPosition;
             _vision.Reset(); _vision.Submit(_lastFrame, true, VisionModel.Text.Trim()); return;
         }
         HandObservation result = _recognition.Inspect(FrameAdapter.ToPixels(_lastFrame), Model.AutomaticHeroCards);
@@ -241,7 +251,14 @@ public partial class MainWindow : Window
     }
     private void ClearRecognition(string status)
     {
-        _vision.Reset(); _recognition.Reset(); Model.ApplyObservation(new(false, "", "", status));
+        _vision.Reset(); _recognition.Reset(); Model.ApplyPosition(PositionObservation.Unknown("Waiting for current seats and dealer button.")); Model.ApplyObservation(new(false, "", "", status));
+    }
+    private void PositionSettingsChanged(object sender, RoutedEventArgs e)
+    {
+        if (_recognition is null) return;
+        _vision.DetectPosition = Model.AutomaticPosition;
+        ClearRecognition("Position mode changed. Checking current cards.");
+        if (_frozen) InspectStaticFrame();
     }
     private void VisionSettingsChanged(object sender, RoutedEventArgs e)
     {

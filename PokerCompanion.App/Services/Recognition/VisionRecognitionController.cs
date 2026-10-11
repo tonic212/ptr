@@ -1,8 +1,10 @@
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
+using System.Windows.Media;
 using PokerCompanion.Core.Recognition;
 
 namespace PokerCompanion.App.Services.Recognition;
@@ -13,6 +15,11 @@ public sealed class VisionRecognitionController : IDisposable
 {
     private readonly IVisionCardReader _reader;
     private readonly VisionHandConfirmation _confirmation = new();
+    private readonly PositionConfirmation _positionConfirmation = new();
+    private BitmapSource? _latestTable;
+    private DateTime _nextPositionRead, _positionExpires;
+    public bool DetectPosition { get; set; } = true;
+    public event Action<PositionObservation, bool>? PositionReady;
     private HeroVisionImage? _latest, _anchor;
     private bool _pendingStatic;
     private string _model = "";
@@ -27,6 +34,8 @@ public sealed class VisionRecognitionController : IDisposable
     {
         _generation++; _cancellation?.Cancel(); _confirmation.Reset();
         _latest = null; _anchor = null; _pendingStatic = false; _confirmed = false; _nextRead = DateTime.MinValue;
+        _latestTable = null; _positionConfirmation.Reset(); _nextPositionRead = DateTime.MinValue; _positionExpires = DateTime.MinValue;
+        PositionReady?.Invoke(PositionObservation.Unknown("Waiting for current seats and dealer button."), false);
     }
     public void Submit(BitmapSource table, bool staticPreview, string model)
     {
@@ -39,12 +48,17 @@ public sealed class VisionRecognitionController : IDisposable
         {
             Reset(); Publish(new(false, "", "", "Hero image changed. Checking the current cards."), staticPreview);
         }
-        _latest = image; _anchor ??= image; _model = model;
+        _latest = image; _latestTable = table; _anchor ??= image; _model = model;
+        if (DetectPosition && _positionExpires != DateTime.MinValue && DateTime.UtcNow >= _positionExpires)
+        {
+            _positionExpires = DateTime.MinValue; _positionConfirmation.Reset();
+            PositionReady?.Invoke(PositionObservation.Unknown("Position expired. Checking the current button."), staticPreview);
+        }
         if (_busy && staticPreview) _pendingStatic = true;
         if (_busy || (!staticPreview && DateTime.UtcNow < _nextRead)) return;
-        _ = ReadAsync(image, staticPreview, model, _generation);
+        _ = ReadAsync(image, table, staticPreview, model, _generation);
     }
-    private async Task ReadAsync(HeroVisionImage image, bool staticPreview, string model, long generation)
+    private async Task ReadAsync(HeroVisionImage image, BitmapSource table, bool staticPreview, string model, long generation)
     {
         _busy = true;
         using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
@@ -58,17 +72,31 @@ public sealed class VisionRecognitionController : IDisposable
             var result = staticPreview ? reading : _confirmation.Observe(reading);
             _confirmed = !staticPreview && result.Success;
             Publish(result, staticPreview);
+            if (!result.Success)
+            {
+                _positionConfirmation.Reset(); _positionExpires = DateTime.MinValue;
+                PositionReady?.Invoke(PositionObservation.Unknown("Waiting for confirmed hero cards before detecting position."), staticPreview);
+            }
+            else if (DetectPosition && _reader is IVisionPositionReader positions && (staticPreview || DateTime.UtcNow >= _nextPositionRead))
+            {
+                var position = await positions.ReadPositionAsync(EncodeTable(table), model, cancellation.Token);
+                if (_disposed || generation != _generation || _latest is null || !VisionFrameGuard.Matches(image.Pixels, _latest.Pixels)) return;
+                position = staticPreview ? position : _positionConfirmation.Observe(position);
+                _positionExpires = position.Success && !staticPreview ? DateTime.UtcNow.AddSeconds(20) : DateTime.MinValue;
+                _nextPositionRead = DateTime.UtcNow.AddSeconds(4);
+                PositionReady?.Invoke(position, staticPreview);
+            }
         }
         catch (OperationCanceledException)
         {
             if (!_disposed && generation == _generation)
-            { _confirmation.Reset(); _confirmed = false; Publish(new(false, "", "", "Vision request timed out. Prepare local vision and try again."), staticPreview); }
+            { Reset(); Publish(new(false, "", "", "Vision request timed out. Prepare local vision and try again."), staticPreview); }
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or ArgumentException or System.Text.Json.JsonException or System.IO.IOException)
         {
             if (!_disposed && generation == _generation)
             {
-                _confirmation.Reset(); _confirmed = false;
+                Reset();
                 string message = ex is HttpRequestException ? "Local vision could not connect. Click Prepare local vision to retry setup." : ex.Message;
                 Publish(new(false, "", "", message), staticPreview);
             }
@@ -77,12 +105,20 @@ public sealed class VisionRecognitionController : IDisposable
         {
             _busy = false; _cancellation = null;
             _nextRead = DateTime.UtcNow.AddSeconds(2);
-            if (_pendingStatic && !_disposed && _latest is not null)
+            if (_pendingStatic && !_disposed && _latest is not null && _latestTable is not null)
             {
                 _pendingStatic = false;
-                _ = ReadAsync(_latest, true, _model, _generation);
+                _ = ReadAsync(_latest, _latestTable, true, _model, _generation);
             }
         }
+    }
+    private static byte[] EncodeTable(BitmapSource table)
+    {
+        if (table.PixelWidth / (double)table.PixelHeight >= .85) throw new InvalidOperationException("Select the whole portrait PPPoker table for position detection.");
+        double scale = Math.Min(1, 1000.0 / table.PixelHeight);
+        BitmapSource image = scale < 1 ? new TransformedBitmap(table, new ScaleTransform(scale, scale)) : table;
+        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(image));
+        using var stream = new MemoryStream(); encoder.Save(stream); return stream.ToArray();
     }
     private void Publish(HandObservation observation, bool staticPreview) => ObservationReady?.Invoke(observation, staticPreview);
     public void Dispose() { _disposed = true; Reset(); }

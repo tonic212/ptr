@@ -3,6 +3,7 @@
     <TextBlock Text="DETECTED CARDS" FontSize="12" Foreground="#A7BDDB"/>
     <TextBlock Text="{Binding RecognizedCards}" Margin="0,6,0,4" FontSize="20" TextWrapping="Wrap"/>
     <TextBlock Text="{Binding RecognitionStatus}" TextWrapping="Wrap" FontSize="12" Foreground="#A7BDDB"/>
+    <TextBlock Text="{Binding PositionStatus}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="14"/>
     <TextBlock Text="CHART LOOKUP — MANUAL SCENARIO" Margin="0,12,0,4" FontSize="12" Foreground="#A7BDDB"/>
     <TextBlock Text="{Binding Hand}" FontSize="16"/>
     <TextBlock Text="{Binding Action}" FontSize="24" FontWeight="Bold" TextWrapping="Wrap"/>

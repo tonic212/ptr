@@ -1,0 +1,82 @@
+using System.Text.Json;
+
+namespace PokerCompanion.Core.Recognition;
+
+public sealed record SeatPoint(double X, double Y);
+public sealed record PositionObservation(bool Success, string Position, int PlayerCount, string LayoutKey, string Status)
+{
+    public static PositionObservation Unknown(string status) => new(false, "", 0, "", status);
+}
+
+public interface IVisionPositionReader
+{
+    Task<PositionObservation> ReadPositionAsync(byte[] png, string model, CancellationToken cancellationToken);
+}
+
+// The model locates seats/button only. Clockwise ordering and chart position are code.
+public static class TablePositionParser
+{
+    private static readonly string[] Positions = ["UTG", "UTG+1", "UTG+2", "LJ", "HJ", "CO", "BTN", "SB", "BB"];
+    public static PositionObservation Parse(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            if (root.GetProperty("clear").ValueKind != JsonValueKind.True)
+                return PositionObservation.Unknown("Seat layout or dealer button is unclear.");
+            var seats = root.GetProperty("seats").EnumerateArray()
+                .Select(s => new SeatPoint(s.GetProperty("x").GetDouble(), s.GetProperty("y").GetDouble())).ToArray();
+            return Calculate(seats, root.GetProperty("dealer").GetInt32());
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException)
+        { return PositionObservation.Unknown("Invalid seat/button reading. Checking again."); }
+    }
+    public static PositionObservation Calculate(IReadOnlyList<SeatPoint> seats, int dealer)
+    {
+        if (seats.Count < 3 || seats.Count > 9 || dealer < 0 || dealer >= seats.Count)
+            return PositionObservation.Unknown("Need 3–9 clearly identified players and one dealer button. Heads-up charts are not available.");
+        for (int i = 0; i < seats.Count; i++)
+        {
+            var s = seats[i];
+            if (!double.IsFinite(s.X) || !double.IsFinite(s.Y) || s.X < 0 || s.X > 1 || s.Y < 0 || s.Y > 1
+                || (Math.Abs(s.X - .5) < .17 && Math.Abs(s.Y - .48) < .17))
+                return PositionObservation.Unknown("Invalid player-seat location.");
+            for (int j = 0; j < i; j++)
+                if (Math.Pow(s.X - seats[j].X, 2) + Math.Pow(s.Y - seats[j].Y, 2) < .0064)
+                    return PositionObservation.Unknown("Duplicate or overlapping player seats.");
+        }
+        var heroes = Enumerable.Range(0, seats.Count).Where(i => seats[i].Y >= .72 && seats[i].X >= .30 && seats[i].X <= .70).ToArray();
+        if (heroes.Length != 1) return PositionObservation.Unknown("Cannot identify exactly one bottom hero seat.");
+        int hero = heroes[0];
+        var order = Enumerable.Range(0, seats.Count).OrderBy(i => Math.Atan2(seats[i].Y - .48, seats[i].X - .5)).ToArray();
+        int buttonIndex = Array.IndexOf(order, dealer), heroIndex = Array.IndexOf(order, hero);
+        int clockwiseAfterButton = (heroIndex - buttonIndex + seats.Count) % seats.Count;
+        string position = clockwiseAfterButton switch
+        {
+            0 => "BTN", 1 => "SB", 2 => "BB",
+            _ => Positions[9 - seats.Count + clockwiseAfterButton - 3]
+        };
+        // Rotate around hero so response array order and subpixel movement do not alter identity.
+        int buttonAfterHero = (buttonIndex - heroIndex + seats.Count) % seats.Count;
+        string key = $"{seats.Count}:{buttonAfterHero}:" + string.Join(";", Enumerable.Range(0, seats.Count).Select(k =>
+        {
+            var s = seats[order[(heroIndex + k) % seats.Count]];
+            return s.X < .3 ? "L" : s.X > .7 ? "R" : s.Y < .48 ? "T" : "H";
+        }));
+        return new(true, position, seats.Count, key, $"Hero: {position} • {seats.Count} players. Nine-seat chart label by distance from BTN.");
+    }
+}
+
+public sealed class PositionConfirmation
+{
+    private string _candidate = "";
+    private int _count;
+    public void Reset() { _candidate = ""; _count = 0; }
+    public PositionObservation Observe(PositionObservation reading)
+    {
+        if (!reading.Success) { Reset(); return reading; }
+        if (reading.LayoutKey == _candidate) _count++; else { _candidate = reading.LayoutKey; _count = 1; }
+        return _count >= 2 ? reading : PositionObservation.Unknown("Confirming occupied seats and dealer button on a second capture.");
+    }
+}

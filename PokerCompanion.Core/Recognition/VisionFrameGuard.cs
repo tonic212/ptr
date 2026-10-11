@@ -31,6 +31,6 @@ public sealed class VisionHandConfirmation
         if (!reading.Success) { Reset(); return reading; }
         if (reading.Cards == _candidate) _readings++; else { _candidate = reading.Cards; _readings = 1; }
         if (_readings < 2) return new(false, "", "", "Vision reading: " + reading.Cards + ". Waiting for a second matching capture.");
-        return reading with { Status = "Local vision: two matching captures. Scenario, position and stack remain manual." };
+        return reading with { Status = "Local vision: two matching card captures. Select action scenario and stack; position can be detected automatically." };
     }
 }

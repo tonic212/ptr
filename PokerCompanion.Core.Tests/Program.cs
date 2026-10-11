@@ -202,6 +202,89 @@ using (var tenDocument = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppCon
 }
 foreach (var template in profile.Templates.Where(t => t.Kind == "rank" && t.Label != "T"))
     Check(!PrintedTenDetector.IsPrintedTen(template.Mask), "ten guard rejects other seeded ranks: " + template.Label);
+// Rotate the dealer through every seat count; screen y increases clockwise.
+string[] sourcePositions = ["UTG", "UTG+1", "UTG+2", "LJ", "HJ", "CO", "BTN", "SB", "BB"];
+for (int count = 3; count <= 9; count++)
+{
+    SeatPoint[] seats = Enumerable.Range(0, count).Select(i => {
+        double angle = Math.PI / 2 + i * 2 * Math.PI / count;
+        return new SeatPoint(.5 + .43 * Math.Cos(angle), .48 + .38 * Math.Sin(angle));
+    }).ToArray();
+    for (int dealer = 0; dealer < count; dealer++)
+    {
+        int distance = (count - dealer) % count;
+        string expected = distance switch { 0 => "BTN", 1 => "SB", 2 => "BB", _ => sourcePositions[9-count+distance-3] };
+        var position = TablePositionParser.Calculate(seats, dealer);
+        Check(position.Success && position.Position == expected && position.PlayerCount == count, $"{count} seats dealer {dealer} maps to {expected}");
+        var reversed = seats.Reverse().ToArray();
+        Check(TablePositionParser.Calculate(reversed, count - 1 - dealer).LayoutKey == position.LayoutKey, "seat response order is irrelevant");
+    }
+}
+SeatPoint[] sixSeats = [new(.5,.86),new(.1,.67),new(.1,.29),new(.5,.10),new(.9,.29),new(.9,.67)];
+var heroSb = TablePositionParser.Calculate(sixSeats, 5);
+var heroBb = TablePositionParser.Calculate(sixSeats, 4);
+Check(heroSb.Position == "SB" && heroBb.Position == "BB", "right bottom button makes hero SB");
+Check(TablePositionParser.Calculate(sixSeats, 3).Position == "LJ", "six handed first to act maps to source LJ");
+Check(!TablePositionParser.Calculate([sixSeats[0], sixSeats[1]], 1).Success, "heads up unsupported");
+Check(!TablePositionParser.Calculate(sixSeats, 6).Success, "dealer must belong to an occupied seat");
+Check(!TablePositionParser.Calculate(sixSeats.Append(sixSeats[0]).ToArray(), 0).Success, "duplicate seat rejected");
+Check(!TablePositionParser.Calculate(sixSeats.Select(s => new SeatPoint(s.X, s.Y - .3)).ToArray(), 0).Success, "missing bottom hero rejected");
+Check(!TablePositionParser.Calculate(sixSeats.Append(new SeatPoint(.5,.5)).ToArray(), 0).Success, "central decorative dealer rejected");
+Check(!TablePositionParser.Parse("{}").Success && !TablePositionParser.Parse("not json").Success, "malformed position JSON rejected");
+Check(!TablePositionParser.Parse("{\"clear\":false,\"seats\":[],\"dealer\":-1}").Success, "unclear table withheld");
+var positionConfirmation = new PositionConfirmation();
+Check(!positionConfirmation.Observe(heroSb).Success, "first position capture withheld");
+Check(positionConfirmation.Observe(heroSb).Position == "SB", "two position captures confirm");
+Check(!positionConfirmation.Observe(heroBb).Success, "button movement clears old position");
+Check(positionConfirmation.Observe(heroBb).Position == "BB", "new button confirms independently");
+positionConfirmation.Observe(PositionObservation.Unknown("unclear"));
+Check(!positionConfirmation.Observe(heroBb).Success, "unknown position resets confirmation");
+using var positionHandler = new FakeOllamaHandler();
+using var positionReader = new PokerCompanion.App.Services.Recognition.OllamaVisionCardReader(positionHandler);
+string positionJson = JsonSerializer.Serialize(new { clear = true, seats = sixSeats.Select(s => new { x = s.X, y = s.Y }), dealer = 5 });
+positionHandler.Body = JsonSerializer.Serialize(new { done = true, message = new { content = positionJson } });
+Check((await positionReader.ReadPositionAsync([1,2,3], "local", CancellationToken.None)).Position == "SB", "position transport and parser");
+using (var body = JsonDocument.Parse(positionHandler.LastBody!))
+{
+    Check(body.RootElement.GetProperty("format").GetProperty("properties").GetProperty("seats").GetProperty("maxItems").GetInt32() == 9, "position output bounded");
+    Check(body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32() == 384, "position token budget bounded");
+}
+var vm = new PokerCompanion.App.ViewModels.MainViewModel();
+Check(vm.SelectedChart is null, "automatic range starts without stale chart");
+vm.UseDetectedHand = false; vm.Hand = "AA";
+Check(vm.Action == "Waiting for position", "unknown position blocks chart lookup");
+vm.ApplyPosition(heroSb);
+Check(vm.SelectedChart?.Name == "RFI | SB", "SB opening chart selected automatically");
+vm.ApplyPosition(TablePositionParser.Calculate(sixSeats, 0));
+Check(vm.SelectedChart?.Name == "RFI | BTN", "BTN movement switches range");
+vm.ApplyPosition(heroBb);
+Check(vm.SelectedChart is null && vm.Action == "No matching range", "BB never substituted opening range");
+vm.Scenario = "Facing raise";
+Check(vm.SelectedChart is null, "facing raise needs explicit opponent");
+vm.OpponentPosition = "UTG+1";
+Check(vm.SelectedChart?.Name == "Facing raise | BB vs UTG/UTG+1", "grouped opponent chart resolved");
+vm.OpponentPosition = "BTN";
+Check(vm.SelectedChart?.Name == "Facing raise | BB vs BTN", "opponent change switches chart");
+vm.ApplyPosition(heroSb); vm.Scenario = "Facing 3-bet"; vm.OpponentPosition = "BB";
+Check(vm.SelectedChart?.Name == "Facing 3-bet | SB vs BB", "3bet chart selection");
+vm.Scenario = "SB limp vs BB raise";
+Check(vm.SelectedChart?.Name == "Facing 3-bet | SB limp vs BB raise", "separate limp chart selection");
+vm.ApplyPosition(heroBb);
+Check(vm.SelectedChart is null, "limp special scenario restricted to SB");
+vm.ApplyPosition(heroSb, true);
+Check(vm.SelectedChart is null && vm.PositionStatus.StartsWith("Static preview"), "static position cannot select live range");
+vm.AutomaticPosition = false;
+Check(vm.SelectedChart is not null && vm.ManualChartSelection, "manual chart fallback remains available");
+vm.AutomaticPosition = true;
+Check(vm.SelectedChart is null, "reenabling auto does not retain manual range");
+foreach (var chart in vm.Charts)
+{
+    var parts = chart.Name.Split(" | ");
+    if (parts[1] == "SB limp vs BB raise") continue;
+    var matchup = parts[1].Split(" vs ");
+    foreach (string opponent in matchup.Length == 2 ? matchup[1].Split('/') : new[] { "" })
+        Check(PokerCompanion.Core.PositionChartSelector.Select(vm.Charts, matchup[0], parts[0], opponent)?.Id == chart.Id, "all source scenarios resolve: " + chart.Name + " " + opponent);
+}
 Console.WriteLine($"PASS: {assertions} recognition assertions.");
 
 

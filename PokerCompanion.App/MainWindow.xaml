@@ -4,9 +4,16 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
       <StackPanel>
         <TextBlock Text="Poker Companion" FontSize="26" FontWeight="Bold" Margin="0,0,0,8"/>
-        <TextBlock Text="Card recognition + preflop chart lookup. Scenario, position, stack and street remain manual. No equity calculation." TextWrapping="Wrap" Margin="0,0,0,16"/>
+        <TextBlock Text="Automatic hero cards and position + preflop chart lookup. Action scenario, opponent, stack and street remain manual." TextWrapping="Wrap" Margin="0,0,0,16"/>
+        <CheckBox Content="Detect hero position and switch ranges" IsChecked="{Binding AutomaticPosition}" Click="PositionSettingsChanged" Margin="0,0,0,8"/>
+        <TextBlock Text="{Binding PositionStatus}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+        <TextBlock Text="Action scenario (select each hand)"/>
+        <ComboBox ItemsSource="{Binding Scenarios}" SelectedItem="{Binding Scenario}"/>
+        <TextBlock Text="Opponent position (facing a raise / 3-bet)"/>
+        <ComboBox ItemsSource="{Binding OpponentPositions}" SelectedItem="{Binding OpponentPosition}"/>
+        <TextBlock Text="Position labels match the nine-seat source charts. Shorter tables map by distance from BTN; these are not separately solved short-handed ranges." TextWrapping="Wrap" Margin="0,0,0,8"/>
         <TextBlock Text="Exact preflop chart scenario"/>
-        <ComboBox ItemsSource="{Binding Charts}" SelectedItem="{Binding SelectedChart}" DisplayMemberPath="Name"/>
+        <ComboBox ItemsSource="{Binding Charts}" SelectedItem="{Binding SelectedChart}" DisplayMemberPath="Name" IsEnabled="{Binding ManualChartSelection}"/>
         <CheckBox Content="Use detected hand for chart lookup" IsChecked="{Binding UseDetectedHand}" Margin="0,0,0,8"/>
         <TextBlock Text="Hand class (AA, AKs, AKo)"/>
         <TextBox Text="{Binding Hand, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding UseDetectedHand}"/>
